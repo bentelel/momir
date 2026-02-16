@@ -1,7 +1,10 @@
 import requests
 import json
+from image import DrawImage
+from PIL import Image
 
 MAX_NUMBER_FACES = 2
+DEFAULT_IMG_MODE = True
 
 def momirLoop(imageMode: bool):
     while True:
@@ -32,7 +35,6 @@ def momirLoop(imageMode: bool):
                 printCardInfo(j)
                 if imageMode:
                     artwork = getArt(j)
-                    print(artwork)
         except:
             print('Could not fetch card.')
             print('Status code: '+str(j['status']))
@@ -50,11 +52,19 @@ def printCardInfo(j: dict):
 
 def getArt(j: dict):
     imgURI = j['image_uris']['art_crop']
-    img = ''
-    return img
+    r = requests.get(imgURI)
+    with open('img/imgColor.png', 'wb') as f:
+        f.write(r.content)
+    img = Image.open('img/imgColor.png')
+    img = img.convert('1') # convert to BW
+    img.save('img/imgBW.png')
+    #img.show()
+    img = DrawImage.from_url(imgURI, (48,24))
+    img.draw_image()
+    return r.content
 
 def main():
-    imageMode = False
+    imageMode = DEFAULT_IMG_MODE
     momirLoop(imageMode)
     quit()
 
