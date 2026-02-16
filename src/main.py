@@ -1,7 +1,10 @@
 import requests
 import json
+from image import DrawImage
+from PIL import Image
 
 MAX_NUMBER_FACES = 2
+DEFAULT_IMG_MODE = True
 
 def momirLoop(imageMode: bool):
     while True:
@@ -11,23 +14,27 @@ def momirLoop(imageMode: bool):
             if inp == 'q':
                 break
             if inp == 'i':
-                imageMode = True
-                print("Imagemode turned")
+                imageMode = not imageMode
+                print('Imagemode turned '+('on.' if imageMode else 'off.'))
                 continue
         try:
             _ = int(inp)
         except:
             print("Entered value was not an integer.")
             continue
-        r = requests.get(f'https://api.scryfall.com/cards/random?q=mv={inp}%20t=creature%20is=transform')
+        r = requests.get(f'https://api.scryfall.com/cards/random?q=mv={inp}%20t=creature')
         j = r.json()
         #print(j)
         try:
             if j['layout'] in ('split', 'flip', 'transform', 'meld', 'modal_dfc', ''):
                 for i in range(MAX_NUMBER_FACES):
                     printCardInfo(j['card_faces'][i])
+                    if imageMode:
+                        artwork = getArt(j['card_faces'][i])
             else:
                 printCardInfo(j)
+                if imageMode:
+                    artwork = getArt(j)
         except:
             print('Could not fetch card.')
             print('Status code: '+str(j['status']))
@@ -43,8 +50,21 @@ def printCardInfo(j: dict):
         print(j['power']+'/'+j['toughness'])
     print('')
 
+def getArt(j: dict):
+    imgURI = j['image_uris']['art_crop']
+    r = requests.get(imgURI)
+    with open('img/imgColor.png', 'wb') as f:
+        f.write(r.content)
+    img = Image.open('img/imgColor.png')
+    img = img.convert('1') # convert to BW
+    img.save('img/imgBW.png')
+    #img.show()
+    img = DrawImage.from_url(imgURI, (48,24))
+    img.draw_image()
+    return r.content
+
 def main():
-    imageMode = False
+    imageMode = DEFAULT_IMG_MODE
     momirLoop(imageMode)
     quit()
 
