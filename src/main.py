@@ -11,23 +11,28 @@ def momirLoop(imageMode: bool):
             if inp == 'q':
                 break
             if inp == 'i':
-                imageMode = True
-                print("Imagemode turned")
+                imageMode = not imageMode
+                print('Imagemode turned '+('on.' if imageMode else 'off.'))
                 continue
         try:
             _ = int(inp)
         except:
             print("Entered value was not an integer.")
             continue
-        r = requests.get(f'https://api.scryfall.com/cards/random?q=mv={inp}%20t=creature%20is=transform')
+        r = requests.get(f'https://api.scryfall.com/cards/random?q=mv={inp}%20t=creature')
         j = r.json()
         #print(j)
         try:
             if j['layout'] in ('split', 'flip', 'transform', 'meld', 'modal_dfc', ''):
                 for i in range(MAX_NUMBER_FACES):
                     printCardInfo(j['card_faces'][i])
+                    if imageMode:
+                        artwork = getArt(j['card_faces'][i])
             else:
                 printCardInfo(j)
+                if imageMode:
+                    artwork = getArt(j)
+                    print(artwork)
         except:
             print('Could not fetch card.')
             print('Status code: '+str(j['status']))
@@ -42,6 +47,11 @@ def printCardInfo(j: dict):
     if 'Creature' in j['type_line']:
         print(j['power']+'/'+j['toughness'])
     print('')
+
+def getArt(j: dict):
+    imgURI = j['image_uris']['art_crop']
+    img = ''
+    return img
 
 def main():
     imageMode = False
