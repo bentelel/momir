@@ -6,6 +6,11 @@ from pathlib import Path
 
 MAX_NUMBER_FACES = 2
 DEFAULT_IMG_MODE = True
+SETS_TO_EXCLUDE = ('UGL','UNH', 'UST', 'UND', 'UNF')
+SET_EXCLUSION = '-set:'
+RANDOM_CARD_URI = 'https://api.scryfall.com/cards/random?'
+MV_FILTER = 'mv='
+CREATURE_FILTER = 't=creature'
 
 def momirLoop(imageMode: bool):
     while True:
@@ -23,7 +28,12 @@ def momirLoop(imageMode: bool):
         except:
             print("Entered value was not an integer.")
             continue
-        r = requests.get(f'https://api.scryfall.com/cards/random?q=mv={inp}%20t=creature')
+        # build str to exclude sets
+        excludedSets = ''
+        if len(SETS_TO_EXCLUDE) > 0:
+            for s in SETS_TO_EXCLUDE:
+                excludedSets += SET_EXCLUSION + s + '%20'
+        r = requests.get(f'https://api.scryfall.com/cards/random?q={MV_FILTER}{inp}%20{CREATURE_FILTER}%20{excludedSets}')
         j = r.json()
         #print(j)
         try:
