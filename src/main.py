@@ -2,6 +2,7 @@ import requests
 import json
 from image import DrawImage
 from PIL import Image
+from pathlib import Path
 
 MAX_NUMBER_FACES = 2
 DEFAULT_IMG_MODE = True
@@ -64,6 +65,7 @@ def getArt(j: dict):
     return r.content
 
 def main():
+    Path("img/").mkdir(parents=False, exist_ok=True)
     imageMode = DEFAULT_IMG_MODE
     momirLoop(imageMode)
     quit()
