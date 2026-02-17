@@ -13,6 +13,7 @@ RANDOM_CARD_URI = 'https://api.scryfall.com/cards/random?'
 MV_FILTER = 'mv='
 CREATURE_FILTER = 't=creature'
 TEST_INJECTION = ''#'name=Hostile%20Hostel'
+DEBUG_MODE = False
 
 def momirLoop(imageMode: bool):
     while True:
@@ -47,7 +48,8 @@ def momirLoop(imageMode: bool):
                 break
             r = requests.get(f'https://api.scryfall.com/cards/random?q={MV_FILTER}{inp}%20{CREATURE_FILTER}%20{excludedSets}%20{TEST_INJECTION}')
             j = r.json()
-            print(j)
+            if DEBUG_MODE:
+                print(j)
             try:
                 if j['layout'] in ('split', 'flip', 'transform', 'meld', 'modal_dfc', ''):
                     #check if fronside is a creature
