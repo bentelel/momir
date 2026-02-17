@@ -4,6 +4,7 @@ from image import DrawImage
 from PIL import Image
 from pathlib import Path
 
+MAX_ATTEMPTS = 3
 MAX_NUMBER_FACES = 2
 DEFAULT_IMG_MODE = True
 SETS_TO_EXCLUDE = ('UGL','UNH', 'UST', 'UND', 'UNF')
@@ -11,6 +12,7 @@ SET_EXCLUSION = '-set:'
 RANDOM_CARD_URI = 'https://api.scryfall.com/cards/random?'
 MV_FILTER = 'mv='
 CREATURE_FILTER = 't=creature'
+TEST_INJECTION = ''#'name=Hostile%20Hostel'
 
 def momirLoop(imageMode: bool):
     while True:
@@ -33,24 +35,38 @@ def momirLoop(imageMode: bool):
         if len(SETS_TO_EXCLUDE) > 0:
             for s in SETS_TO_EXCLUDE:
                 excludedSets += SET_EXCLUSION + s + '%20'
-        r = requests.get(f'https://api.scryfall.com/cards/random?q={MV_FILTER}{inp}%20{CREATURE_FILTER}%20{excludedSets}')
-        j = r.json()
-        #print(j)
-        try:
-            if j['layout'] in ('split', 'flip', 'transform', 'meld', 'modal_dfc', ''):
-                for i in range(MAX_NUMBER_FACES):
-                    printCardInfo(j['card_faces'][i])
+
+## need to filter the request (or probably the response) to not give us cards of types like 'Land // Artifact Creature — Horror Construct' > front face is a land not a creature!
+## example: Hostile Hostel
+## Not sure if we can filter scryfall for this?
+        attemptCounter = 0
+        while True:
+            attemptCounter += 1
+            if attemptCounter > MAX_ATTEMPTS:
+                print(f'Could not fetch fitting card in {MAX_ATTEMPTS} attempts. Please try with another cmc.')
+                break
+            r = requests.get(f'https://api.scryfall.com/cards/random?q={MV_FILTER}{inp}%20{CREATURE_FILTER}%20{excludedSets}%20{TEST_INJECTION}')
+            j = r.json()
+            print(j)
+            try:
+                if j['layout'] in ('split', 'flip', 'transform', 'meld', 'modal_dfc', ''):
+                    #check if fronside is a creature
+                    frontSideType = j['card_faces'][0]['type_line']
+                    if frontSideType != 'Creature':
+                        continue
+                    for i in range(MAX_NUMBER_FACES):
+                        printCardInfo(j['card_faces'][i])
+                        if imageMode:
+                            artwork = getArt(j['card_faces'][i])
+                else:
+                    printCardInfo(j)
                     if imageMode:
-                        artwork = getArt(j['card_faces'][i])
-            else:
-                printCardInfo(j)
-                if imageMode:
-                    artwork = getArt(j)
-        except:
-            print('Could not fetch card.')
-            print('Status code: '+str(j['status']))
-            print('Details: '+j['details'])
-        print('')
+                        artwork = getArt(j)
+            except:
+                print('Could not fetch card.')
+                print('Status code: '+str(j['status']))
+                print('Details: '+j['details'])
+            break
 
 def printCardInfo(j: dict):
     print(j['name'])
