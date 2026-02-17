@@ -1,9 +1,13 @@
 import json
 import random
+import yaml
+
+with open('config.yaml', 'r') as f:
+        CONFIG = yaml.safe_load(f)
 
 class OfflineClient:
     def __init__(self):
-        with open('cards/oracle-cards-20260217100533.json', 'r') as f:
+        with open(f"cards/{CONFIG['offline']['card_json']}", 'r') as f:
             self.data = json.load(f)
 
     def getRandomCard(self):

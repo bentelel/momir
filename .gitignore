@@ -1,5 +1,6 @@
 #project specific
 img/
+cards/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
