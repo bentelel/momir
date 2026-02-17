@@ -1,0 +1,32 @@
+general:
+  max_attempts: 3
+api_options:
+  random_card_uri: 'https://api.scryfall.com/cards/random'
+  set_exclusion: '-set:'
+  manavalue_filter: 'mv='
+  creature_filter: 't=creature'
+  request_timeout_in_s: 30
+  max_number_faces: 2
+  splitcard_layouts:
+    -'split'
+    -'flip'
+    -'transform'
+    -'meld'
+    -'modal_dfc'
+  sets_to_exclude:
+    -'UGL'
+    -'UNH'
+    -'UST'
+    -'UND'
+    -'UNF'
+debug:
+  debug_mode_enabled: False
+  test_query_options: '' #'name=Hostile%20Hostel'
+image_options:
+  default_img_mode: True
+  img_width: 48
+  img_height: 24
+  img_draw_type: 'colorBlocks' #either colorBlocks or ASCII
+  img_default_fetch_type: 'uri' # uri or local
+
+
