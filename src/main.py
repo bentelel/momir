@@ -16,8 +16,13 @@ CREATURE_FILTER = 't=creature'
 TEST_INJECTION = ''#'name=Hostile%20Hostel'
 DEBUG_MODE = False
 REQUEST_TIMEOUT_IN_S = 30
+IMG_WIDTH = 48
+IMG_HEIGHT = 24
+IMG_TYPE = 'colorBlocks' #either colorBlocks or ASCII
 
-def momirLoop(imageMode: bool):
+
+def momirLoop():
+    imageMode = DEFAULT_IMG_MODE
     while True:
         inp = input('please enter a manavalue: ')
         if inp == 'o':
@@ -48,7 +53,8 @@ def momirLoop(imageMode: bool):
             if attemptCounter > MAX_ATTEMPTS:
                 print(f'Could not fetch fitting card in {MAX_ATTEMPTS} attempts. Please try with another cmc.')
                 break
-            response = makeGetRequest(f'https://api.scryfall.com/cards/random?q={MV_FILTER}{inp}%20{CREATURE_FILTER}%20{excludedSets}%20{TEST_INJECTION}')
+            responseObject = makeGetRequest(f'https://api.scryfall.com/cards/random?q={MV_FILTER}{inp}%20{CREATURE_FILTER}%20{excludedSets}%20{TEST_INJECTION}')
+            response = responseObject.json()
             if DEBUG_MODE:
                 print(response)
             try:
@@ -60,11 +66,13 @@ def momirLoop(imageMode: bool):
                     for i in range(MAX_NUMBER_FACES):
                         printCardInfo(response['card_faces'][i])
                         if imageMode:
-                            artwork = getArt(response['card_faces'][i])
+                           getArt(response['card_faces'][i]['image_uris']['art_crop'])
+                           printArt('uri', response['card_faces'][i]['image_uris']['art_crop']) 
                 else:
                     printCardInfo(response)
                     if imageMode:
-                        artwork = getArt(response)
+                        getArt(response['image_uris']['art_crop'])
+                        printArt('uri', response['image_uris']['art_crop']) 
             except:
                 print('Could not fetch card.')
                 print('Status code: '+str(response['status']))
@@ -75,10 +83,10 @@ def makeGetRequest(URI: str) -> json:
     r = requests.get(URI, timeout=REQUEST_TIMEOUT_IN_S)
     if DEBUG_MODE:
         print(r.elapsed.total_seconds())
-    j = r.json()
-    return j
+    #j = r.json()
+    return r
 
-def printCardInfo(j: dict):
+def printCardInfo(j: dict) -> None:
     print(j['name'])
     print(j['mana_cost'])
     print(j['type_line'])
@@ -87,25 +95,28 @@ def printCardInfo(j: dict):
         print(j['power']+'/'+j['toughness'])
     print('')
 
-def getArt(j: dict):
-    imgURI = j['image_uris']['art_crop']
-    r = requests.get(imgURI)
+def getArt(URI: str):
+    r = makeGetRequest(URI)
     with open('img/imgColor.png', 'wb') as f:
         f.write(r.content)
     img = Image.open('img/imgColor.png')
     img = img.convert('1') # convert to BW
     img.save('img/imgBW.png')
-    #img.show()
-    img = DrawImage.from_url(imgURI, (48,24))
-    img.draw_image()
     return r.content
 
-def main():
+def printArt(mode:str, path: str) -> None:
+    if mode=='uri':
+        img = DrawImage.from_url(path, (IMG_WIDTH,IMG_HEIGHT))
+    elif mode=='local':
+        img = DrawImage.from_file(path, (IMG_WIDTH, IMG_HEIGHT))
+    img.draw_image()
+    
+
+def main() -> None:
     if DEBUG_MODE:
         printer.testPrinter()
     Path("img/").mkdir(parents=False, exist_ok=True)
-    imageMode = DEFAULT_IMG_MODE
-    momirLoop(imageMode)
+    momirLoop()
     quit()
 
 if __name__ == "__main__":
