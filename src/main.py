@@ -4,23 +4,30 @@ from image import DrawImage
 from PIL import Image
 from pathlib import Path
 import printer
+import yaml
 
-MAX_ATTEMPTS = 3
-MAX_NUMBER_FACES = 2
-DEFAULT_IMG_MODE = True
-SETS_TO_EXCLUDE = ('UGL','UNH', 'UST', 'UND', 'UNF')
-SET_EXCLUSION = '-set:'
-RANDOM_CARD_URI = 'https://api.scryfall.com/cards/random'
-MV_FILTER = 'mv='
-CREATURE_FILTER = 't=creature'
-TEST_INJECTION = ''#'name=Hostile%20Hostel'
-DEBUG_MODE = False
-REQUEST_TIMEOUT_IN_S = 30
-IMG_WIDTH = 48
-IMG_HEIGHT = 24
-IMG_DRAW_TYPE = 'colorBlocks' #either colorBlocks or ASCII
-IMG_DEFAULT_FETCH_TYPE = 'uri' # uri or local
-SPLITCARD_LAYOUTS = ('split', 'flip', 'transform', 'meld', 'modal_dfc')
+with open('config.yaml', 'r') as f:
+    config = yaml.safe_load(f)
+
+MAX_ATTEMPTS = config['general']['max_attempts']
+
+REQUEST_TIMEOUT_IN_S = config['api_options']['request_timeout_in_s']
+RANDOM_CARD_URI = config['api_options']['random_card_uri']
+MAX_NUMBER_FACES = config['api_options']['max_number_faces']
+CREATURE_FILTER = config['api_options']['creature_filter']
+MV_FILTER = config['api_options']['manavalue_filter']
+SET_EXCLUSION = config['api_options']['set_exclusion']
+SETS_TO_EXCLUDE = config['api_options']['sets_to_exclude']
+SPLITCARD_LAYOUTS = config['api_options']['splitcard_layouts']
+
+DEBUG_MODE_ENABLED = config['debug']['debug_mode_enabled']
+TEST_INJECTION = config['debug']['test_query_options']#'name=Hostile%20Hostel'
+
+DEFAULT_IMG_MODE = config['image_options']['default_img_mode']
+IMG_DEFAULT_FETCH_TYPE = config['image_options']['img_default_fetch_type']
+IMG_DRAW_TYPE = config['image_options']['img_draw_type']
+IMG_WIDTH = config['image_options']['img_width']
+IMG_HEIGHT = config['image_options']['img_height']
 
 
 def momirLoop():
@@ -45,10 +52,6 @@ def momirLoop():
         if len(SETS_TO_EXCLUDE) > 0:
             for s in SETS_TO_EXCLUDE:
                 excludedSets += SET_EXCLUSION + s + '%20'
-
-## need to filter the request (or probably the response) to not give us cards of types like 'Land // Artifact Creature — Horror Construct' > front face is a land not a creature!
-## example: Hostile Hostel
-## Not sure if we can filter scryfall for this?
         attemptCounter = 0
         while True:
             attemptCounter += 1
@@ -57,7 +60,7 @@ def momirLoop():
                 break
             responseObject = makeGetRequest(f'{RANDOM_CARD_URI}?q={MV_FILTER}{inp}%20{CREATURE_FILTER}%20{excludedSets}%20{TEST_INJECTION}')
             response = responseObject.json()
-            if DEBUG_MODE:
+            if DEBUG_MODE_ENABLED:
                 print(response)
             try:
                 if response['layout'] in SPLITCARD_LAYOUTS:
@@ -83,7 +86,7 @@ def momirLoop():
 
 def makeGetRequest(URI: str) -> requests.models.Response:
     r = requests.get(URI, timeout=REQUEST_TIMEOUT_IN_S)
-    if DEBUG_MODE:
+    if DEBUG_MODE_ENABLED:
         print(r.elapsed.total_seconds())
     #j = r.json()
     return r
@@ -118,7 +121,7 @@ def printArt(fetchMode:str, drawMode: str, path: str) -> None:
     
 
 def main() -> None:
-    if DEBUG_MODE:
+    if DEBUG_MODE_ENABLED:
         printer.testPrinter()
     Path("img/").mkdir(parents=False, exist_ok=True)
     momirLoop()
