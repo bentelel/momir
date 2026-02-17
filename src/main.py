@@ -93,13 +93,13 @@ def makeGetRequest(URI: str) -> requests.models.Response:
 
 def printCardInfo(j: dict) -> None:
     output = (
-        f'{j['name']}\n'
-        f'{j['mana_cost']}\n'
-        f'{j['type_line']}\n'
-        f'{j['oracle_text']}\n'
+        f"{j['name']}\n"
+        f"{j['mana_cost']}\n"
+        f"{j['type_line']}\n"
+        f"{j['oracle_text']}\n"
     )
     if 'Creature' in j['type_line']:
-        output += f'{j['power']}/{j['toughness']}'
+        output += f"{j['power']}/{j['toughness']}"
     print(output)    
     print('')
 
