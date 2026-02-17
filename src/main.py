@@ -2,11 +2,29 @@ import requests
 import json
 from image import DrawImage
 from PIL import Image
+from pathlib import Path
+import printer
 
+MAX_ATTEMPTS = 3
 MAX_NUMBER_FACES = 2
 DEFAULT_IMG_MODE = True
+SETS_TO_EXCLUDE = ('UGL','UNH', 'UST', 'UND', 'UNF')
+SET_EXCLUSION = '-set:'
+RANDOM_CARD_URI = 'https://api.scryfall.com/cards/random'
+MV_FILTER = 'mv='
+CREATURE_FILTER = 't=creature'
+TEST_INJECTION = ''#'name=Hostile%20Hostel'
+DEBUG_MODE = False
+REQUEST_TIMEOUT_IN_S = 30
+IMG_WIDTH = 48
+IMG_HEIGHT = 24
+IMG_DRAW_TYPE = 'colorBlocks' #either colorBlocks or ASCII
+IMG_DEFAULT_FETCH_TYPE = 'uri' # uri or local
+SPLITCARD_LAYOUTS = ('split', 'flip', 'transform', 'meld', 'modal_dfc')
 
-def momirLoop(imageMode: bool):
+
+def momirLoop():
+    imageMode = DEFAULT_IMG_MODE
     while True:
         inp = input('please enter a manavalue: ')
         if inp == 'o':
@@ -22,26 +40,55 @@ def momirLoop(imageMode: bool):
         except:
             print("Entered value was not an integer.")
             continue
-        r = requests.get(f'https://api.scryfall.com/cards/random?q=mv={inp}%20t=creature')
-        j = r.json()
-        #print(j)
-        try:
-            if j['layout'] in ('split', 'flip', 'transform', 'meld', 'modal_dfc', ''):
-                for i in range(MAX_NUMBER_FACES):
-                    printCardInfo(j['card_faces'][i])
-                    if imageMode:
-                        artwork = getArt(j['card_faces'][i])
-            else:
-                printCardInfo(j)
-                if imageMode:
-                    artwork = getArt(j)
-        except:
-            print('Could not fetch card.')
-            print('Status code: '+str(j['status']))
-            print('Details: '+j['details'])
-        print('')
+        # build str to exclude sets
+        excludedSets = ''
+        if len(SETS_TO_EXCLUDE) > 0:
+            for s in SETS_TO_EXCLUDE:
+                excludedSets += SET_EXCLUSION + s + '%20'
 
-def printCardInfo(j: dict):
+## need to filter the request (or probably the response) to not give us cards of types like 'Land // Artifact Creature — Horror Construct' > front face is a land not a creature!
+## example: Hostile Hostel
+## Not sure if we can filter scryfall for this?
+        attemptCounter = 0
+        while True:
+            attemptCounter += 1
+            if attemptCounter > MAX_ATTEMPTS:
+                print(f'Could not fetch fitting card in {MAX_ATTEMPTS} attempts. Please try with another cmc.')
+                break
+            responseObject = makeGetRequest(f'{RANDOM_CARD_URI}?q={MV_FILTER}{inp}%20{CREATURE_FILTER}%20{excludedSets}%20{TEST_INJECTION}')
+            response = responseObject.json()
+            if DEBUG_MODE:
+                print(response)
+            try:
+                if response['layout'] in SPLITCARD_LAYOUTS:
+                    #check if fronside is a creature
+                    frontSideType = response['card_faces'][0]['type_line']
+                    if frontSideType != 'Creature':
+                        continue
+                    for i in range(MAX_NUMBER_FACES):
+                        printCardInfo(response['card_faces'][i])
+                        if imageMode:
+                           getArt(response['card_faces'][i]['image_uris']['art_crop'])
+                           printArt(IMG_DEFAULT_FETCH_TYPE, IMG_DRAW_TYPE, response['card_faces'][i]['image_uris']['art_crop']) 
+                else:
+                    printCardInfo(response)
+                    if imageMode:
+                        getArt(response['image_uris']['art_crop'])
+                        printArt(IMG_DEFAULT_FETCH_TYPE, IMG_DRAW_TYPE, response['image_uris']['art_crop']) 
+            except:
+                print('Could not fetch card.')
+                print('Status code: '+str(response['status']))
+                print('Details: '+response['details'])
+            break
+
+def makeGetRequest(URI: str) -> requests.models.Response:
+    r = requests.get(URI, timeout=REQUEST_TIMEOUT_IN_S)
+    if DEBUG_MODE:
+        print(r.elapsed.total_seconds())
+    #j = r.json()
+    return r
+
+def printCardInfo(j: dict) -> None:
     print(j['name'])
     print(j['mana_cost'])
     print(j['type_line'])
@@ -50,22 +97,32 @@ def printCardInfo(j: dict):
         print(j['power']+'/'+j['toughness'])
     print('')
 
-def getArt(j: dict):
-    imgURI = j['image_uris']['art_crop']
-    r = requests.get(imgURI)
+def getArt(URI: str) -> str:
+    r = makeGetRequest(URI)
     with open('img/imgColor.png', 'wb') as f:
         f.write(r.content)
     img = Image.open('img/imgColor.png')
     img = img.convert('1') # convert to BW
     img.save('img/imgBW.png')
-    #img.show()
-    img = DrawImage.from_url(imgURI, (48,24))
-    img.draw_image()
     return r.content
 
-def main():
-    imageMode = DEFAULT_IMG_MODE
-    momirLoop(imageMode)
+def printArt(fetchMode:str, drawMode: str, path: str) -> None:
+    if fetchMode=='uri':
+        img = DrawImage.from_url(path, (IMG_WIDTH,IMG_HEIGHT))
+    elif fetchMode=='local':
+        img = DrawImage.from_file(path, (IMG_WIDTH, IMG_HEIGHT))
+    if drawMode == 'colorBlocks': 
+        img.draw_image()
+    elif drawMode == 'ASCII':
+        print('err: not yet implemented')
+    
+
+def main() -> None:
+    if DEBUG_MODE:
+        printer.testPrinter()
+    Path("img/").mkdir(parents=False, exist_ok=True)
+    momirLoop()
     quit()
 
-main()
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,4 @@
+pillow
+requests
+terminal-img
+python-escpos[all]
