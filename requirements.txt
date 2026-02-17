@@ -1,0 +1,4 @@
+pillow
+requests
+json
+terminal-img
