@@ -3,6 +3,7 @@ import json
 from image import DrawImage
 from PIL import Image
 from pathlib import Path
+import printer
 
 MAX_ATTEMPTS = 3
 MAX_NUMBER_FACES = 2
@@ -93,9 +94,12 @@ def getArt(j: dict):
     return r.content
 
 def main():
+    if DEBUG_MODE:
+        printer.testPrinter()
     Path("img/").mkdir(parents=False, exist_ok=True)
     imageMode = DEFAULT_IMG_MODE
     momirLoop(imageMode)
     quit()
 
-main()
+if __name__ == "__main__":
+    main()
