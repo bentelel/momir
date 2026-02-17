@@ -1,4 +1,4 @@
 pillow
 requests
-json
 terminal-img
+python-escpos[all]
