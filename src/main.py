@@ -3,8 +3,9 @@ import json
 from image import DrawImage
 from PIL import Image
 from pathlib import Path
-import printer
 import yaml
+import offline
+import printer
 
 with open('config.yaml', 'r') as f:
     config = yaml.safe_load(f)
@@ -128,6 +129,9 @@ def main() -> None:
         printer.testPrinter()
     Path("img/").mkdir(parents=False, exist_ok=True)
     momirLoop()
+    if DEBUG_MODE_ENABLED:
+        o = offline.OfflineClient()
+        o.getRandomCard()
     quit()
 
 if __name__ == "__main__":
