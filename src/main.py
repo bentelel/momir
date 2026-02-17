@@ -15,6 +15,7 @@ MV_FILTER = 'mv='
 CREATURE_FILTER = 't=creature'
 TEST_INJECTION = ''#'name=Hostile%20Hostel'
 DEBUG_MODE = False
+REQUEST_TIMEOUT_IN_S = 30
 
 def momirLoop(imageMode: bool):
     while True:
@@ -47,29 +48,35 @@ def momirLoop(imageMode: bool):
             if attemptCounter > MAX_ATTEMPTS:
                 print(f'Could not fetch fitting card in {MAX_ATTEMPTS} attempts. Please try with another cmc.')
                 break
-            r = requests.get(f'https://api.scryfall.com/cards/random?q={MV_FILTER}{inp}%20{CREATURE_FILTER}%20{excludedSets}%20{TEST_INJECTION}')
-            j = r.json()
+            response = makeGetRequest(f'https://api.scryfall.com/cards/random?q={MV_FILTER}{inp}%20{CREATURE_FILTER}%20{excludedSets}%20{TEST_INJECTION}')
             if DEBUG_MODE:
-                print(j)
+                print(response)
             try:
-                if j['layout'] in ('split', 'flip', 'transform', 'meld', 'modal_dfc', ''):
+                if response['layout'] in ('split', 'flip', 'transform', 'meld', 'modal_dfc', ''):
                     #check if fronside is a creature
-                    frontSideType = j['card_faces'][0]['type_line']
+                    frontSideType = response['card_faces'][0]['type_line']
                     if frontSideType != 'Creature':
                         continue
                     for i in range(MAX_NUMBER_FACES):
-                        printCardInfo(j['card_faces'][i])
+                        printCardInfo(response['card_faces'][i])
                         if imageMode:
-                            artwork = getArt(j['card_faces'][i])
+                            artwork = getArt(response['card_faces'][i])
                 else:
-                    printCardInfo(j)
+                    printCardInfo(response)
                     if imageMode:
-                        artwork = getArt(j)
+                        artwork = getArt(response)
             except:
                 print('Could not fetch card.')
-                print('Status code: '+str(j['status']))
-                print('Details: '+j['details'])
+                print('Status code: '+str(response['status']))
+                print('Details: '+response['details'])
             break
+
+def makeGetRequest(URI: str) -> json:
+    r = requests.get(URI, timeout=REQUEST_TIMEOUT_IN_S)
+    if DEBUG_MODE:
+        print(r.elapsed.total_seconds())
+    j = r.json()
+    return j
 
 def printCardInfo(j: dict):
     print(j['name'])
