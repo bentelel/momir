@@ -14,7 +14,7 @@ class OfflineClient:
         with open(f"cards/{CONFIG['offline']['card_json']}", 'r', encoding='utf-8') as f:
             self.cards = json.load(f)
         self.getRandomCard()
-        self.filterData()
+        self.filterCards()
 
     def getRandomCard(self):
         self.randomCard = random.choice(self.cards)
@@ -35,7 +35,7 @@ class OfflineClient:
                 return False
         return True
 
-    def filterData(self):
+    def filterCards(self):
         #method to filter the loaded json to only include momir valid cards
         self.filteredCards = [x for x in self.cards if self.verifyCard(x)]
 
