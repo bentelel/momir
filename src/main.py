@@ -3,8 +3,9 @@ import json
 from image import DrawImage
 from PIL import Image
 from pathlib import Path
-import printer
 import yaml
+import offline
+import printer
 
 with open('config.yaml', 'r') as f:
     config = yaml.safe_load(f)
@@ -93,13 +94,13 @@ def makeGetRequest(URI: str) -> requests.models.Response:
 
 def printCardInfo(j: dict) -> None:
     output = (
-        f'{j['name']}\n'
-        f'{j['mana_cost']}\n'
-        f'{j['type_line']}\n'
-        f'{j['oracle_text']}\n'
+        f"{j['name']}\n"
+        f"{j['mana_cost']}\n"
+        f"{j['type_line']}\n"
+        f"{j['oracle_text']}\n"
     )
     if 'Creature' in j['type_line']:
-        output += f'{j['power']}/{j['toughness']}'
+        output += f"{j['power']}/{j['toughness']}"
     print(output)    
     print('')
 
@@ -128,6 +129,9 @@ def main() -> None:
         printer.testPrinter()
     Path("img/").mkdir(parents=False, exist_ok=True)
     momirLoop()
+    if DEBUG_MODE_ENABLED:
+        o = offline.OfflineClient()
+        o.getRandomCard()
     quit()
 
 if __name__ == "__main__":
