@@ -28,8 +28,8 @@ def momirLoop(config: Config, state: AppState) -> None:
                 if state.offline_enabled:
                     print('Enabling offline mode - this might take some seconds.')
             elif inp == 'i':
-                imageMode = not imageMode
-                print('Imagemode turned '+('on.' if imageMode else 'off.'))
+                state.image_mode = not state.image_mode
+                print('Imagemode turned '+('on.' if state.image_mode else 'off.'))
                 continue
         try:
             _ = int(inp)
@@ -58,6 +58,7 @@ def momirLoop(config: Config, state: AppState) -> None:
                 if state.debug_enabled:
                     print(response)
                 try:
+                # this should probably be broken into distinct try-except blocks. currently we catch all errors in the api call, printing and image drawing in the same block
                     if response['layout'] in config.api.splitcard_layouts:
                         #check if fronside is a creature
                         frontSideType = response['card_faces'][0]['type_line']
@@ -67,17 +68,18 @@ def momirLoop(config: Config, state: AppState) -> None:
                             printCardInfo(response['card_faces'][i])
                             if state.image_mode:
                                getArt(response['card_faces'][i]['image_uris']['art_crop'], config.api.request_timeout_in_s)
-                               printArt(config.image.default_fetch_type, config.image.img_draw_type, response['card_faces'][i]['image_uris']['art_crop'], config.image.img_width, config.image.img_height) 
+                               printArt(config.image.img_default_fetch_type, config.image.img_draw_type, response['card_faces'][i]['image_uris']['art_crop'], config.image.img_width, config.image.img_height) 
                     # add meld card clause
                     else:
                         printCardInfo(response)
                         if state.image_mode:
                             getArt(response['image_uris']['art_crop'], config.api.request_timeout_in_s)
-                            printArt(config.image.default_fetch_type, config.image.img_draw_type, response['image_uris']['art_crop'], config.image.img_width, config.image.img_height) 
+                            printArt(config.image.img_default_fetch_type, config.image.img_draw_type, response['image_uris']['art_crop'], config.image.img_width, config.image.img_height) 
                 except:
                     print('Could not fetch card.')
                     print('Status code: '+str(response['status']))
                     print('Details: '+response['details'])
+
             break
 
 def makeGetRequest(URI: str, timeout_in_s: str) -> requests.models.Response:
