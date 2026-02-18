@@ -31,7 +31,7 @@ IMG_WIDTH = config['image_options']['img_width']
 IMG_HEIGHT = config['image_options']['img_height']
 
 
-def momirLoop():
+def momirLoop() -> None:
     imageMode = DEFAULT_IMG_MODE
     while True:
         inp = input('please enter a manavalue: ')
