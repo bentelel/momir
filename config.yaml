@@ -24,8 +24,8 @@ api_options:
     -'UND'
     -'UNF'
 debug:
-  debug_mode_enabled: True
-  test_query_options: '' #'name=Hostile%20Hostel'
+  debug_mode_enabled: False
+  test_query_options: 'layout=modal_dfc' #'name=Hostile%20Hostel'
 image_options:
   default_img_mode: True
   img_width: 48
