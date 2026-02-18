@@ -23,10 +23,12 @@ def momirLoop(config: Config, state: AppState) -> None:
                 break
             elif inp == 'd':
                 state.debug_enabled = not state.debug_enabled
+                print('Debugmode turned '+('on.' if state.debug_enabled else 'off.'))
+                continue
             elif inp == 'o':
                 state.offline_enabled = not state.offline_enabled
-                if state.offline_enabled:
-                    print('Enabling offline mode - this might take some seconds.')
+                print('Offline mode was ' +('on - this might take some seconds.' if state.offline_enabled else 'off.'))
+                continue
             elif inp == 'i':
                 state.image_mode = not state.image_mode
                 print('Imagemode turned '+('on.' if state.image_mode else 'off.'))
