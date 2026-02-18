@@ -1,7 +1,7 @@
 general:
   max_attempts: 3
 offline:
-  card_json: 'oracle-cards-20260217100533.json'
+  card_json: 'oracle-cards-20260217100533.json' 
 api_options:
   random_card_uri: 'https://api.scryfall.com/cards/random'
   set_exclusion: '-set:'
@@ -13,8 +13,9 @@ api_options:
     -'split'
     -'flip'
     -'transform'
-    -'meld'
     -'modal_dfc'
+  layout_edgecases:
+    -'meld'
   sets_to_exclude:
     -'UGL'
     -'UNH'
