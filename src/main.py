@@ -74,6 +74,7 @@ def momirLoop() -> None:
                         if imageMode:
                            getArt(response['card_faces'][i]['image_uris']['art_crop'])
                            printArt(IMG_DEFAULT_FETCH_TYPE, IMG_DRAW_TYPE, response['card_faces'][i]['image_uris']['art_crop']) 
+                # add meld card clause
                 else:
                     printCardInfo(response)
                     if imageMode:

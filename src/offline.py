@@ -28,6 +28,7 @@ class OfflineClient:
             return False
         if 'Creature' not in card['type_line']:
             return False
+        #add clause for meld cards
         if card['layout'] in CONFIG['api_options']['splitcard_layouts']: 
             # need to nest this because the non-double sided cards do not have the card_faces key
             if 'Creature' not in card['card_faces'][0]['type_line']:
