@@ -3,37 +3,18 @@ import json
 from image import DrawImage
 from PIL import Image
 from pathlib import Path
-import yaml
 import offline
 import printer
+from dataclasses import dataclass
+from config import load_config, Config
 
-with open('config.yaml', 'r') as f:
-    config = yaml.safe_load(f)
+@dataclass
+class AppState:
+    debug_enabled: bool
+    offline_enabled: bool
+    image_mode: bool
 
-MAX_ATTEMPTS = config['general']['max_attempts']
-OFFLINE_MODE_ENABLED = config['offline']['offline_mode_enabled']
-
-REQUEST_TIMEOUT_IN_S = config['api_options']['request_timeout_in_s']
-RANDOM_CARD_URI = config['api_options']['random_card_uri']
-MAX_NUMBER_FACES = config['api_options']['max_number_faces']
-CREATURE_FILTER = config['api_options']['creature_filter']
-MV_FILTER = config['api_options']['manavalue_filter']
-SET_EXCLUSION = config['api_options']['set_exclusion']
-SETS_TO_EXCLUDE = config['api_options']['sets_to_exclude']
-SPLITCARD_LAYOUTS = config['api_options']['splitcard_layouts']
-
-DEBUG_MODE_ENABLED = config['debug']['debug_mode_enabled']
-TEST_INJECTION = config['debug']['test_query_options']#'name=Hostile%20Hostel'
-
-DEFAULT_IMG_MODE = config['image_options']['default_img_mode']
-IMG_DEFAULT_FETCH_TYPE = config['image_options']['img_default_fetch_type']
-IMG_DRAW_TYPE = config['image_options']['img_draw_type']
-IMG_WIDTH = config['image_options']['img_width']
-IMG_HEIGHT = config['image_options']['img_height']
-
-
-def momirLoop() -> None:
-    imageMode = DEFAULT_IMG_MODE
+def momirLoop(config: Config, state: AppState) -> None:
     while True:
         inp = input('please enter a manavalue: ').lower()
         if inp == 'o':
@@ -41,10 +22,10 @@ def momirLoop() -> None:
             if inp == 'q':
                 break
             elif inp == 'd':
-                DEBUG_MODE_ENABLED = not DEBUG_MODE_ENABLED
+                state.debug_enabled = not state.debug_enabled
             elif inp == 'o':
-                OFFLINE_MODE_ENABLED = not OFFLINE_MODE_ENABLED
-                if OFFLINE_MODE_ENABLED:
+                state.offline_enabled = not state.offline_enabled
+                if state.offline_enabled:
                     print('Enabling offline mode - this might take some seconds.')
             elif inp == 'i':
                 imageMode = not imageMode
@@ -57,50 +38,50 @@ def momirLoop() -> None:
             continue
         # build str to exclude sets
         excludedSets = ''
-        if len(SETS_TO_EXCLUDE) > 0:
-            for s in SETS_TO_EXCLUDE:
-                excludedSets += SET_EXCLUSION + s + '%20'
+        if len(config.api.sets_to_exclude) > 0:
+            for s in config.api.sets_to_exclude:
+                excludedSets += config.api.set_exclusion + s + '%20'
         attemptCounter = 0
         while True:
             attemptCounter += 1
-            if attemptCounter > MAX_ATTEMPTS:
-                print(f'Could not fetch fitting card in {MAX_ATTEMPTS} attempts. Please try with another cmc.')
+            if attemptCounter > config.general.max_attempts:
+                print(f'Could not fetch fitting card in {config.general.max_attempts} attempts. Please try with another cmc.')
                 break
-            if not OFFLINE_MODE_ENABLED:
-                uri = f'{RANDOM_CARD_URI}?q={MV_FILTER}{inp}%20{CREATURE_FILTER}%20{excludedSets}'
-                if DEBUG_MODE_ENABLED:
-                    uri += f'%20{TEST_INJECTION}'
-                responseObject = makeGetRequest(uri)
+            if not state.offline_enabled:
+                uri = f'{config.api.random_card_uri}?q={config.api.manavalue_filter}{inp}%20{config.api.creature_filter}%20{excludedSets}'
+                if state.debug_enabled:
+                    uri += f'%20{config.debug.test_query_options}'
+                responseObject = makeGetRequest(uri,config.api.request_timeout_in_s)
+                if state.debug_enabled:
+                        print(responseObject.elapsed.total_seconds())
                 response = responseObject.json()
-                if DEBUG_MODE_ENABLED:
+                if state.debug_enabled:
                     print(response)
                 try:
-                    if response['layout'] in SPLITCARD_LAYOUTS:
+                    if response['layout'] in config.api.splitcard_layouts:
                         #check if fronside is a creature
                         frontSideType = response['card_faces'][0]['type_line']
                         if 'Creature' not in frontSideType:
                             continue
-                        for i in range(MAX_NUMBER_FACES):
+                        for i in range(config.api.max_number_faces):
                             printCardInfo(response['card_faces'][i])
-                            if imageMode:
-                               getArt(response['card_faces'][i]['image_uris']['art_crop'])
-                               printArt(IMG_DEFAULT_FETCH_TYPE, IMG_DRAW_TYPE, response['card_faces'][i]['image_uris']['art_crop']) 
+                            if state.image_mode:
+                               getArt(response['card_faces'][i]['image_uris']['art_crop'], config.api.request_timeout_in_s)
+                               printArt(config.image.default_fetch_type, config.image.img_draw_type, response['card_faces'][i]['image_uris']['art_crop'], config.image.img_width, config.image.img_height) 
                     # add meld card clause
                     else:
                         printCardInfo(response)
-                        if imageMode:
-                            getArt(response['image_uris']['art_crop'])
-                            printArt(IMG_DEFAULT_FETCH_TYPE, IMG_DRAW_TYPE, response['image_uris']['art_crop']) 
+                        if state.image_mode:
+                            getArt(response['image_uris']['art_crop'], config.api.request_timeout_in_s)
+                            printArt(config.image.default_fetch_type, config.image.img_draw_type, response['image_uris']['art_crop'], config.image.img_width, config.image.img_height) 
                 except:
                     print('Could not fetch card.')
                     print('Status code: '+str(response['status']))
                     print('Details: '+response['details'])
             break
 
-def makeGetRequest(URI: str) -> requests.models.Response:
-    r = requests.get(URI, timeout=REQUEST_TIMEOUT_IN_S)
-    if DEBUG_MODE_ENABLED:
-        print(r.elapsed.total_seconds())
+def makeGetRequest(URI: str, timeout_in_s: str) -> requests.models.Response:
+    r = requests.get(URI, timeout=timeout_in_s)    
     #j = r.json()
     return r
 
@@ -116,8 +97,8 @@ def printCardInfo(j: dict) -> None:
     print(output)    
     print('')
 
-def getArt(URI: str) -> str:
-    r = makeGetRequest(URI)
+def getArt(URI: str, timeout_in_s: str) -> str:
+    r = makeGetRequest(URI, timeout_in_s)
     with open('img/imgColor.png', 'wb') as f:
         f.write(r.content)
     img = Image.open('img/imgColor.png')
@@ -125,11 +106,11 @@ def getArt(URI: str) -> str:
     img.save('img/imgBW.png')
     return r.content
 
-def printArt(fetchMode:str, drawMode: str, path: str) -> None:
+def printArt(fetchMode:str, drawMode: str, path: str, width: str, height: str) -> None:
     if fetchMode=='uri':
-        img = DrawImage.from_url(path, (IMG_WIDTH,IMG_HEIGHT))
+        img = DrawImage.from_url(path, (width,height))
     elif fetchMode=='local':
-        img = DrawImage.from_file(path, (IMG_WIDTH, IMG_HEIGHT))
+        img = DrawImage.from_file(path, (width,height))
     if drawMode == 'colorBlocks': 
         img.draw_image()
     elif drawMode == 'ASCII':
@@ -137,11 +118,17 @@ def printArt(fetchMode:str, drawMode: str, path: str) -> None:
     
 
 def main() -> None:
-    if DEBUG_MODE_ENABLED:
+    config = load_config()
+    state = AppState(
+        debug_enabled=config.debug.debug_mode_enabled,
+        offline_enabled=config.offline.offline_mode_enabled,
+        image_mode=config.image.default_img_mode,
+    )
+    if state.debug_enabled:
         printer.testPrinter()
     Path("img/").mkdir(parents=False, exist_ok=True)
-    momirLoop()
-    if DEBUG_MODE_ENABLED:
+    momirLoop(config, state)
+    if state.debug_enabled:
         o = offline.OfflineClient()
         o.printRandomCard()
     quit()
