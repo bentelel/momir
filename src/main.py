@@ -11,6 +11,7 @@ with open('config.yaml', 'r') as f:
     config = yaml.safe_load(f)
 
 MAX_ATTEMPTS = config['general']['max_attempts']
+OFFLINE_MODE_ENABLED = config['offline']['offline_mode_enabled']
 
 REQUEST_TIMEOUT_IN_S = config['api_options']['request_timeout_in_s']
 RANDOM_CARD_URI = config['api_options']['random_card_uri']
@@ -59,7 +60,10 @@ def momirLoop() -> None:
             if attemptCounter > MAX_ATTEMPTS:
                 print(f'Could not fetch fitting card in {MAX_ATTEMPTS} attempts. Please try with another cmc.')
                 break
-            responseObject = makeGetRequest(f'{RANDOM_CARD_URI}?q={MV_FILTER}{inp}%20{CREATURE_FILTER}%20{excludedSets}%20{TEST_INJECTION}')
+            uri = f'{RANDOM_CARD_URI}?q={MV_FILTER}{inp}%20{CREATURE_FILTER}%20{excludedSets}'
+            if DEBUG_MODE_ENABLED:
+                uri += f'%20{TEST_INJECTION}'
+            responseObject = makeGetRequest(uri)
             response = responseObject.json()
             if DEBUG_MODE_ENABLED:
                 print(response)
@@ -67,7 +71,7 @@ def momirLoop() -> None:
                 if response['layout'] in SPLITCARD_LAYOUTS:
                     #check if fronside is a creature
                     frontSideType = response['card_faces'][0]['type_line']
-                    if frontSideType != 'Creature':
+                    if 'Creature' not in frontSideType:
                         continue
                     for i in range(MAX_NUMBER_FACES):
                         printCardInfo(response['card_faces'][i])
