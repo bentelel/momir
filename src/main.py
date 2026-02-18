@@ -11,6 +11,7 @@ with open('config.yaml', 'r') as f:
     config = yaml.safe_load(f)
 
 MAX_ATTEMPTS = config['general']['max_attempts']
+OFFLINE_MODE_ENABLED = config['offline']['offline_mode_enabled']
 
 REQUEST_TIMEOUT_IN_S = config['api_options']['request_timeout_in_s']
 RANDOM_CARD_URI = config['api_options']['random_card_uri']
@@ -34,12 +35,18 @@ IMG_HEIGHT = config['image_options']['img_height']
 def momirLoop() -> None:
     imageMode = DEFAULT_IMG_MODE
     while True:
-        inp = input('please enter a manavalue: ')
+        inp = input('please enter a manavalue: ').lower()
         if inp == 'o':
-            inp = input('option: ')
+            inp = input('   q-quit\n   d-toggle debugmode\n   o-toggle offlinemode\n   i-toggle imagemode\n').lower()
             if inp == 'q':
                 break
-            if inp == 'i':
+            elif inp == 'd':
+                DEBUG_MODE_ENABLED = not DEBUG_MODE_ENABLED
+            elif inp == 'o':
+                OFFLINE_MODE_ENABLED = not OFFLINE_MODE_ENABLED
+                if OFFLINE_MODE_ENABLED:
+                    print('Enabling offline mode - this might take some seconds.')
+            elif inp == 'i':
                 imageMode = not imageMode
                 print('Imagemode turned '+('on.' if imageMode else 'off.'))
                 continue
@@ -59,30 +66,35 @@ def momirLoop() -> None:
             if attemptCounter > MAX_ATTEMPTS:
                 print(f'Could not fetch fitting card in {MAX_ATTEMPTS} attempts. Please try with another cmc.')
                 break
-            responseObject = makeGetRequest(f'{RANDOM_CARD_URI}?q={MV_FILTER}{inp}%20{CREATURE_FILTER}%20{excludedSets}%20{TEST_INJECTION}')
-            response = responseObject.json()
-            if DEBUG_MODE_ENABLED:
-                print(response)
-            try:
-                if response['layout'] in SPLITCARD_LAYOUTS:
-                    #check if fronside is a creature
-                    frontSideType = response['card_faces'][0]['type_line']
-                    if frontSideType != 'Creature':
-                        continue
-                    for i in range(MAX_NUMBER_FACES):
-                        printCardInfo(response['card_faces'][i])
+            if not OFFLINE_MODE_ENABLED:
+                uri = f'{RANDOM_CARD_URI}?q={MV_FILTER}{inp}%20{CREATURE_FILTER}%20{excludedSets}'
+                if DEBUG_MODE_ENABLED:
+                    uri += f'%20{TEST_INJECTION}'
+                responseObject = makeGetRequest(uri)
+                response = responseObject.json()
+                if DEBUG_MODE_ENABLED:
+                    print(response)
+                try:
+                    if response['layout'] in SPLITCARD_LAYOUTS:
+                        #check if fronside is a creature
+                        frontSideType = response['card_faces'][0]['type_line']
+                        if 'Creature' not in frontSideType:
+                            continue
+                        for i in range(MAX_NUMBER_FACES):
+                            printCardInfo(response['card_faces'][i])
+                            if imageMode:
+                               getArt(response['card_faces'][i]['image_uris']['art_crop'])
+                               printArt(IMG_DEFAULT_FETCH_TYPE, IMG_DRAW_TYPE, response['card_faces'][i]['image_uris']['art_crop']) 
+                    # add meld card clause
+                    else:
+                        printCardInfo(response)
                         if imageMode:
-                           getArt(response['card_faces'][i]['image_uris']['art_crop'])
-                           printArt(IMG_DEFAULT_FETCH_TYPE, IMG_DRAW_TYPE, response['card_faces'][i]['image_uris']['art_crop']) 
-                else:
-                    printCardInfo(response)
-                    if imageMode:
-                        getArt(response['image_uris']['art_crop'])
-                        printArt(IMG_DEFAULT_FETCH_TYPE, IMG_DRAW_TYPE, response['image_uris']['art_crop']) 
-            except:
-                print('Could not fetch card.')
-                print('Status code: '+str(response['status']))
-                print('Details: '+response['details'])
+                            getArt(response['image_uris']['art_crop'])
+                            printArt(IMG_DEFAULT_FETCH_TYPE, IMG_DRAW_TYPE, response['image_uris']['art_crop']) 
+                except:
+                    print('Could not fetch card.')
+                    print('Status code: '+str(response['status']))
+                    print('Details: '+response['details'])
             break
 
 def makeGetRequest(URI: str) -> requests.models.Response:
@@ -131,7 +143,7 @@ def main() -> None:
     momirLoop()
     if DEBUG_MODE_ENABLED:
         o = offline.OfflineClient()
-        o.getRandomCard()
+        o.printRandomCard()
     quit()
 
 if __name__ == "__main__":

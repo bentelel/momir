@@ -1,7 +1,8 @@
 general:
   max_attempts: 3
 offline:
-  card_json: 'oracle-cards-20260217100533.json'
+  offline_mode_enabled: False
+  card_json: 'oracle-cards-20260217100533.json' 
 api_options:
   random_card_uri: 'https://api.scryfall.com/cards/random'
   set_exclusion: '-set:'
@@ -13,8 +14,9 @@ api_options:
     -'split'
     -'flip'
     -'transform'
-    -'meld'
     -'modal_dfc'
+  layout_edgecases:
+    -'meld'
   sets_to_exclude:
     -'UGL'
     -'UNH'
@@ -22,8 +24,8 @@ api_options:
     -'UND'
     -'UNF'
 debug:
-  debug_mode_enabled: True
-  test_query_options: '' #'name=Hostile%20Hostel'
+  debug_mode_enabled: False
+  test_query_options: 'layout=modal_dfc' #'name=Hostile%20Hostel'
 image_options:
   default_img_mode: True
   img_width: 48
