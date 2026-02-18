@@ -7,7 +7,7 @@ with open('config.yaml', 'r') as f:
 
 class OfflineClient:
     def __init__(self):
-        with open(f"cards/{CONFIG['offline']['card_json']}", 'r') as f:
+        with open(f"cards/{CONFIG['offline']['card_json']}", 'r', encoding='utf-8') as f:
             self.data = json.load(f)
 
     def getRandomCard(self):
