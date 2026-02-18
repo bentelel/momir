@@ -131,7 +131,7 @@ def main() -> None:
     momirLoop()
     if DEBUG_MODE_ENABLED:
         o = offline.OfflineClient()
-        o.getRandomCard()
+        o.printRandomCard()
     quit()
 
 if __name__ == "__main__":
