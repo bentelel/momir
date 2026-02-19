@@ -25,6 +25,7 @@ class ParsedCard:
     toughness: str | None = None
     art_url: str | None = None
     layout: str | None = None
+    card_is_dualfaced: bool | None = False
     # if layout is a double or trippledfaced card we store the faces in a nested structure
     faces: List["ParsedCard"] = field(default_factory=list)
 
@@ -87,22 +88,10 @@ class MomirGame:
                     self.parseCard(response) 
                     try:
                     # this should probably be broken into distinct try-except blocks. currently we catch all errors in the api call, printing and image drawing in the same block
-                        if response['layout'] in self.config.api.splitcard_layouts:
-                            #check if fronside is a creature
-                            frontSideType = response['card_faces'][0]['type_line']
-                            if 'Creature' not in frontSideType:
-                                continue
-                            for i in range(self.config.api.max_number_faces):
-                                self.printCardInfo(response['card_faces'][i])
-                                if self.state.image_mode:
-                                   self.getArt(response['card_faces'][i]['image_uris']['art_crop'])
-                                   self.printArt(self.config.image.img_default_fetch_type, self.config.image.img_draw_type, response['card_faces'][i]['image_uris']['art_crop']) 
+                        #if 'Creature' not in frontSideType:
+                        #                continue
                         # add meld card clause
-                        else:
-                            self.printCardInfo(response)
-                            if self.state.image_mode:
-                                self.getArt(response['image_uris']['art_crop'])
-                                self.printArt(self.config.image.img_default_fetch_type, self.config.image.img_draw_type, response['image_uris']['art_crop']) 
+                        self.printCard()
                     except:
                         print('Could not fetch card.')
                         print('Status code: '+str(response['status']))
@@ -115,15 +104,12 @@ class MomirGame:
         #j = r.json()
         return r
 
-    def parseCard(self, card: dict):
+    def parseCard(self, card: dict) -> None:
         # Function should parse card information and output a common format containing all relevant information (name, type_line, oracle_text, toughness etc)
         # this is needed because normal cards, meld cards, flip cards etc have different layouts.
         self.currentCard = ParsedCard()
         if card['layout'] in self.config.api.splitcard_layouts:
             #check if fronside is a creature - this check ideally is moved somewhere else?
-            frontSideType = card['card_faces'][0]['type_line']
-            if 'Creature' not in frontSideType:
-                return
             self.currentCard.layout = card['layout']
             for i in range(self.config.api.max_number_faces):
                 self.currentCard.faces.append(
@@ -136,6 +122,7 @@ class MomirGame:
                         toughness=card['card_faces'][i]['toughness'], 
                         art_url=card['card_faces'][i]['image_uris']['art_crop'],
                         layout=card['layout'],
+                        card_is_dualfaced=True,
                         faces=[]
                     )
                 )
@@ -152,15 +139,28 @@ class MomirGame:
         if self.state.debug_enabled:    
             print(self.currentCard) 
 
-    def printCardInfo(self, card: dict) -> None:
+    def printCard(self) -> None:
+        if not self.currentCard.card_is_dualfaced:
+            self.printCardFace(self.currentCard) 
+            if self.state.image_mode:
+                self.getArt(self.currentCard.art_url)
+                self.printArt(self.config.image.img_default_fetch_type, self.config.image.img_draw_type, self.currentCard.art_url)
+            return
+        for i in range(self.config.api.max_number_faces):
+            self.printCardFace(self.currentCard.faces[i])       
+            if self.state.image_mode:
+                self.getArt(self.currentCardfaces[i].art_url)
+                self.printArt(self.config.image.img_default_fetch_type, self.config.image.img_draw_type, self.currentCard.faces[i].art_url)
+
+    def printCardFace(self, card: ParsedCard) -> None:
         output = (
-            f"{card['name']}\n"
-            f"{card['mana_cost']}\n"
-            f"{card['type_line']}\n"
-            f"{card['oracle_text']}\n"
+            f"{card.name}\n"
+            f"{card.mana_cost}\n"
+            f"{card.type_line}\n"
+            f"{card.oracle_text}\n"
         )
-        if 'Creature' in card['type_line']:
-            output += f"{card['power']}/{card['toughness']}"
+        if 'Creature' in card.type_line:
+            output += f"{card.power}/{card.toughness}"
         print(output)    
         print('')
 
