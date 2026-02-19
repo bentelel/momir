@@ -83,14 +83,11 @@ class MomirGame:
                     if self.state.debug_enabled:
                             print(responseObject.elapsed.total_seconds())
                     response = responseObject.json()
+
                     if self.state.debug_enabled:
                         print(response)
-                    self.parseCard(response) 
                     try:
-                    # this should probably be broken into distinct try-except blocks. currently we catch all errors in the api call, printing and image drawing in the same block
-                        #if 'Creature' not in frontSideType:
-                        #                continue
-                        # add meld card clause
+                        self.parseCard(response) 
                         self.printCard()
                     except:
                         print('Could not fetch card.')
@@ -156,7 +153,7 @@ class MomirGame:
                 self.getArt(self.currentCard.faces[i].art_url)
                 self.printArt(self.config.image.img_default_fetch_type, self.config.image.img_draw_type, self.currentCard.faces[i].art_url)
 
-    def printCardFace(self, card: ParsedCard) -> None:
+    def printCardFace(self, card: ParsedCard) -> str:
         output = (
             f"{card.name}\n"
             f"{card.mana_cost}\n"
@@ -167,6 +164,7 @@ class MomirGame:
             output += f"{card.power}/{card.toughness}"
         print(output)    
         print('')
+        #printer.printSomeShit(output)
 
     def getArt(self, URI: str) -> str:
         r = self.makeGetRequest(URI)
@@ -186,7 +184,8 @@ class MomirGame:
             img.draw_image()
         elif drawMode == 'ASCII':
             print('err: not yet implemented')
-        
+        #with open('img/imgColor.png', 'rb') as f:
+        #    printer.printImage(f)
 
 def main() -> None:
     m = MomirGame(load_config())
