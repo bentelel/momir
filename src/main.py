@@ -5,7 +5,8 @@ from PIL import Image
 from pathlib import Path
 import offline
 import printer
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import List
 from config import load_config, Config
 
 @dataclass
@@ -13,6 +14,19 @@ class AppState:
     debug_enabled: bool
     offline_enabled: bool
     image_mode: bool
+
+@dataclass
+class ParsedCard:
+    name: str
+    mana_cost: str
+    type_line: str
+    oracle_text: str
+    power: str
+    toughness: str
+    art_url: str
+    layout: str
+    # if layout is a double or trippledfaced card we store the faces in a nested structure
+    faces: List["ParsedCard"] = field(default_factory=List)
 
 class MomirGame:
     def __init__(self, config: Config):
@@ -98,6 +112,42 @@ class MomirGame:
         r = requests.get(URI, timeout=self.config.api.request_timeout_in_s)    
         #j = r.json()
         return r
+
+    def parseCard(self, card: dict) -> ParsedCard:
+        # Function should parse card information and output a common format containing all relevant information (name, type_line, oracle_text, toughness etc)
+        # this is needed because normal cards, meld cards, flip cards etc have different layouts.
+        parsedCard = ParsedCard()
+        if card['layout'] in self.config.api.splitcard_layouts:
+            #check if fronside is a creature - this check ideally is moved somewhere else?
+            frontSideType = card['card_faces'][0]['type_line']
+            if 'Creature' not in frontSideType:
+                return parsedCard
+            for i in range(self.config.api.max_number_faces):
+                self.printCardInfo(card['card_faces'][i])
+                parsedCard.faces.append(
+                    ParsedCard(
+                        name=card['card_faces'][i]['name'],
+                        mana_cost=card['card_faces'][i]['mana_cost'],
+                        type_line=card['card_faces'][i]['type_line'],
+                        oracle_text=card['card_faces'][i]['oracle_text'],
+                        power=card['card_faces'][i]['power'],
+                        toughness=card['card_faces'][i]['toughness'], 
+                        art_url=card['card_faces'][i]['image_uris']['art_crop'],
+                        layout=card['card_faces']['layout'],
+                        faces=[]
+                    )
+                )
+        # add meld card clause
+        else:
+            parsedCard.name=card['name']
+            parsedCard.mana_cost=card['mana_cost']
+            parsedCard.type_line=card['type_line']
+            parsedCard.oracle_text=card['oracle_text']
+            parsedCard.power=card['power']
+            parsedCard.toughness=card['toughness'] 
+            parsedCard.art_url=card['image_uris']['art_crop']
+            parsedCard.layout=card['layout']
+        return parsedCard
 
     def printCardInfo(self, card: dict) -> None:
         output = (
