@@ -111,6 +111,7 @@ class MomirGame:
         if card['layout'] in self.config.api.splitcard_layouts:
             #check if fronside is a creature - this check ideally is moved somewhere else?
             self.currentCard.layout = card['layout']
+            self.currentCard.card_is_dualfaced = True
             for i in range(self.config.api.max_number_faces):
                 self.currentCard.faces.append(
                     ParsedCard(
@@ -118,14 +119,15 @@ class MomirGame:
                         mana_cost=card['card_faces'][i]['mana_cost'],
                         type_line=card['card_faces'][i]['type_line'],
                         oracle_text=card['card_faces'][i]['oracle_text'],
-                        power=card['card_faces'][i]['power'],
-                        toughness=card['card_faces'][i]['toughness'], 
                         art_url=card['card_faces'][i]['image_uris']['art_crop'],
                         layout=card['layout'],
-                        card_is_dualfaced=True,
+                        card_is_dualfaced=False,
                         faces=[]
                     )
                 )
+                if 'Creature' in self.currentCard.faces[i].type_line:
+                    self.currentCard.faces[i].power=card['card_faces'][i]['power']
+                    self.currentCard.faces[i].toughness=card['card_faces'][i]['toughness']
         # add meld card clause
         else:
             self.currentCard.name=card['name']
@@ -136,8 +138,10 @@ class MomirGame:
             self.currentCard.toughness=card['toughness'] 
             self.currentCard.art_url=card['image_uris']['art_crop']
             self.currentCard.layout=card['layout']
-        if self.state.debug_enabled:    
+        if self.state.debug_enabled:
+            print('')
             print(self.currentCard) 
+            print('')
 
     def printCard(self) -> None:
         if not self.currentCard.card_is_dualfaced:
@@ -149,7 +153,7 @@ class MomirGame:
         for i in range(self.config.api.max_number_faces):
             self.printCardFace(self.currentCard.faces[i])       
             if self.state.image_mode:
-                self.getArt(self.currentCardfaces[i].art_url)
+                self.getArt(self.currentCard.faces[i].art_url)
                 self.printArt(self.config.image.img_default_fetch_type, self.config.image.img_draw_type, self.currentCard.faces[i].art_url)
 
     def printCardFace(self, card: ParsedCard) -> None:
