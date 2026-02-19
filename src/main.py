@@ -14,125 +14,130 @@ class AppState:
     offline_enabled: bool
     image_mode: bool
 
-def momirLoop(config: Config, state: AppState) -> None:
-    while True:
-        inp = input('please enter a manavalue: ').lower()
-        if inp == 'o':
-            inp = input('   q-quit\n   d-toggle debugmode\n   o-toggle offlinemode\n   i-toggle imagemode\n').lower()
-            if inp == 'q':
-                break
-            elif inp == 'd':
-                state.debug_enabled = not state.debug_enabled
-                print('Debugmode turned '+('on.' if state.debug_enabled else 'off.'))
-                continue
-            elif inp == 'o':
-                state.offline_enabled = not state.offline_enabled
-                print('Offline mode was ' +('on - this might take some seconds.' if state.offline_enabled else 'off.'))
-                continue
-            elif inp == 'i':
-                state.image_mode = not state.image_mode
-                print('Imagemode turned '+('on.' if state.image_mode else 'off.'))
-                continue
-        try:
-            _ = int(inp)
-        except:
-            print("Entered value was not an integer.")
-            continue
-        # build str to exclude sets
-        excludedSets = ''
-        if len(config.api.sets_to_exclude) > 0:
-            for s in config.api.sets_to_exclude:
-                excludedSets += config.api.set_exclusion + s + '%20'
-        attemptCounter = 0
+class MomirGame:
+    def __init__(self, config: Config):
+        self.config = config
+        self.state =  AppState(
+                debug_enabled=config.debug.debug_mode_enabled,
+                offline_enabled=config.offline.offline_mode_enabled,
+                image_mode=config.image.default_img_mode,
+            )
+   
+
+    def run(self) -> None:
         while True:
-            attemptCounter += 1
-            if attemptCounter > config.general.max_attempts:
-                print(f'Could not fetch fitting card in {config.general.max_attempts} attempts. Please try with another cmc.')
+            inp = input('please enter a manavalue: ').lower()
+            if inp == 'o':
+                inp = input('   q-quit\n   d-toggle debugmode\n   o-toggle offlinemode\n   i-toggle imagemode\n').lower()
+                if inp == 'q':
+                    break
+                elif inp == 'd':
+                    self.state.debug_enabled = not self.state.debug_enabled
+                    print('Debugmode turned '+('on.' if self.state.debug_enabled else 'off.'))
+                    continue
+                elif inp == 'o':
+                    self.state.offline_enabled = not self.state.offline_enabled
+                    print('Offline mode was ' +('on - this might take some seconds.' if self.state.offline_enabled else 'off.'))
+                    continue
+                elif inp == 'i':
+                    self.state.image_mode = not self.state.image_mode
+                    print('Imagemode turned '+('on.' if self.state.image_mode else 'off.'))
+                    continue
+            try:
+                _ = int(inp)
+            except:
+                print("Entered value was not an integer.")
+                continue
+            # build str to exclude sets
+            excludedSets = ''
+            if len(self.config.api.sets_to_exclude) > 0:
+                for s in self.config.api.sets_to_exclude:
+                    excludedSets += self.config.api.set_exclusion + s + '%20'
+            attemptCounter = 0
+            while True:
+                attemptCounter += 1
+                if attemptCounter > self.config.general.max_attempts:
+                    print(f'Could not fetch fitting card in {self.config.general.max_attempts} attempts. Please try with another cmc.')
+                    break
+                if not self.state.offline_enabled:
+                    uri = f'{self.config.api.random_card_uri}?q={self.config.api.manavalue_filter}{inp}%20{self.config.api.creature_filter}%20{excludedSets}'
+                    if self.state.debug_enabled:
+                        uri += f'%20{self.config.debug.test_query_options}'
+                    responseObject = self.makeGetRequest(uri)
+                    if self.state.debug_enabled:
+                            print(responseObject.elapsed.total_seconds())
+                    response = responseObject.json()
+                    if self.state.debug_enabled:
+                        print(response)
+                    try:
+                    # this should probably be broken into distinct try-except blocks. currently we catch all errors in the api call, printing and image drawing in the same block
+                        if response['layout'] in self.config.api.splitcard_layouts:
+                            #check if fronside is a creature
+                            frontSideType = response['card_faces'][0]['type_line']
+                            if 'Creature' not in frontSideType:
+                                continue
+                            for i in range(self.config.api.max_number_faces):
+                                self.printCardInfo(response['card_faces'][i])
+                                if self.state.image_mode:
+                                   self.getArt(response['card_faces'][i]['image_uris']['art_crop'])
+                                   self.printArt(self.config.image.img_default_fetch_type, self.config.image.img_draw_type, response['card_faces'][i]['image_uris']['art_crop']) 
+                        # add meld card clause
+                        else:
+                            self.printCardInfo(response)
+                            if self.state.image_mode:
+                                self.getArt(response['image_uris']['art_crop'])
+                                self.printArt(self.config.image.img_default_fetch_type, self.config.image.img_draw_type, response['image_uris']['art_crop']) 
+                    except:
+                        print('Could not fetch card.')
+                        print('Status code: '+str(response['status']))
+                        print('Details: '+response['details'])
+
                 break
-            if not state.offline_enabled:
-                uri = f'{config.api.random_card_uri}?q={config.api.manavalue_filter}{inp}%20{config.api.creature_filter}%20{excludedSets}'
-                if state.debug_enabled:
-                    uri += f'%20{config.debug.test_query_options}'
-                responseObject = makeGetRequest(uri,config.api.request_timeout_in_s)
-                if state.debug_enabled:
-                        print(responseObject.elapsed.total_seconds())
-                response = responseObject.json()
-                if state.debug_enabled:
-                    print(response)
-                try:
-                # this should probably be broken into distinct try-except blocks. currently we catch all errors in the api call, printing and image drawing in the same block
-                    if response['layout'] in config.api.splitcard_layouts:
-                        #check if fronside is a creature
-                        frontSideType = response['card_faces'][0]['type_line']
-                        if 'Creature' not in frontSideType:
-                            continue
-                        for i in range(config.api.max_number_faces):
-                            printCardInfo(response['card_faces'][i])
-                            if state.image_mode:
-                               getArt(response['card_faces'][i]['image_uris']['art_crop'], config.api.request_timeout_in_s)
-                               printArt(config.image.img_default_fetch_type, config.image.img_draw_type, response['card_faces'][i]['image_uris']['art_crop'], config.image.img_width, config.image.img_height) 
-                    # add meld card clause
-                    else:
-                        printCardInfo(response)
-                        if state.image_mode:
-                            getArt(response['image_uris']['art_crop'], config.api.request_timeout_in_s)
-                            printArt(config.image.img_default_fetch_type, config.image.img_draw_type, response['image_uris']['art_crop'], config.image.img_width, config.image.img_height) 
-                except:
-                    print('Could not fetch card.')
-                    print('Status code: '+str(response['status']))
-                    print('Details: '+response['details'])
 
-            break
+    def makeGetRequest(self, URI: str) -> requests.models.Response:
+        r = requests.get(URI, timeout=self.config.api.request_timeout_in_s)    
+        #j = r.json()
+        return r
 
-def makeGetRequest(URI: str, timeout_in_s: str) -> requests.models.Response:
-    r = requests.get(URI, timeout=timeout_in_s)    
-    #j = r.json()
-    return r
+    def printCardInfo(self, card: dict) -> None:
+        output = (
+            f"{card['name']}\n"
+            f"{card['mana_cost']}\n"
+            f"{card['type_line']}\n"
+            f"{card['oracle_text']}\n"
+        )
+        if 'Creature' in card['type_line']:
+            output += f"{card['power']}/{card['toughness']}"
+        print(output)    
+        print('')
 
-def printCardInfo(j: dict) -> None:
-    output = (
-        f"{j['name']}\n"
-        f"{j['mana_cost']}\n"
-        f"{j['type_line']}\n"
-        f"{j['oracle_text']}\n"
-    )
-    if 'Creature' in j['type_line']:
-        output += f"{j['power']}/{j['toughness']}"
-    print(output)    
-    print('')
+    def getArt(self, URI: str) -> str:
+        r = self.makeGetRequest(URI)
+        with open('img/imgColor.png', 'wb') as f:
+            f.write(r.content)
+        img = Image.open('img/imgColor.png')
+        img = img.convert('1') # convert to BW
+        img.save('img/imgBW.png')
+        return r.content
 
-def getArt(URI: str, timeout_in_s: str) -> str:
-    r = makeGetRequest(URI, timeout_in_s)
-    with open('img/imgColor.png', 'wb') as f:
-        f.write(r.content)
-    img = Image.open('img/imgColor.png')
-    img = img.convert('1') # convert to BW
-    img.save('img/imgBW.png')
-    return r.content
-
-def printArt(fetchMode:str, drawMode: str, path: str, width: str, height: str) -> None:
-    if fetchMode=='uri':
-        img = DrawImage.from_url(path, (width,height))
-    elif fetchMode=='local':
-        img = DrawImage.from_file(path, (width,height))
-    if drawMode == 'colorBlocks': 
-        img.draw_image()
-    elif drawMode == 'ASCII':
-        print('err: not yet implemented')
-    
+    def printArt(self, fetchMode:str, drawMode: str, path: str) -> None:
+        if fetchMode=='uri':
+            img = DrawImage.from_url(path, (self.config.image.img_width,self.config.image.img_height))
+        elif fetchMode=='local':
+            img = DrawImage.from_file(path, (self.config.image.img_width,self.config.image.img_height))
+        if drawMode == 'colorBlocks': 
+            img.draw_image()
+        elif drawMode == 'ASCII':
+            print('err: not yet implemented')
+        
 
 def main() -> None:
-    config = load_config()
-    state = AppState(
-        debug_enabled=config.debug.debug_mode_enabled,
-        offline_enabled=config.offline.offline_mode_enabled,
-        image_mode=config.image.default_img_mode,
-    )
-    if state.debug_enabled:
+    m = MomirGame(load_config())
+    if m.state.debug_enabled:
         printer.testPrinter()
     Path("img/").mkdir(parents=False, exist_ok=True)
-    momirLoop(config, state)
-    if state.debug_enabled:
+    m.run()
+    if m.state.debug_enabled:
         o = offline.OfflineClient()
         o.printRandomCard()
     quit()
