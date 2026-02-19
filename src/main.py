@@ -17,16 +17,16 @@ class AppState:
 
 @dataclass
 class ParsedCard:
-    name: str
-    mana_cost: str
-    type_line: str
-    oracle_text: str
-    power: str
-    toughness: str
-    art_url: str
-    layout: str
+    name: str | None = None
+    mana_cost: str | None = None
+    type_line: str | None = None
+    oracle_text: str | None = None
+    power: str | None = None
+    toughness: str | None = None
+    art_url: str | None = None
+    layout: str | None = None
     # if layout is a double or trippledfaced card we store the faces in a nested structure
-    faces: List["ParsedCard"] = field(default_factory=List)
+    faces: List["ParsedCard"] = field(default_factory=list)
 
 class MomirGame:
     def __init__(self, config: Config):
@@ -36,6 +36,7 @@ class MomirGame:
                 offline_enabled=config.offline.offline_mode_enabled,
                 image_mode=config.image.default_img_mode,
             )
+        self.currentCard = ParsedCard()
    
 
     def run(self) -> None:
@@ -83,6 +84,7 @@ class MomirGame:
                     response = responseObject.json()
                     if self.state.debug_enabled:
                         print(response)
+                    self.parseCard(response) 
                     try:
                     # this should probably be broken into distinct try-except blocks. currently we catch all errors in the api call, printing and image drawing in the same block
                         if response['layout'] in self.config.api.splitcard_layouts:
@@ -113,18 +115,18 @@ class MomirGame:
         #j = r.json()
         return r
 
-    def parseCard(self, card: dict) -> ParsedCard:
+    def parseCard(self, card: dict):
         # Function should parse card information and output a common format containing all relevant information (name, type_line, oracle_text, toughness etc)
         # this is needed because normal cards, meld cards, flip cards etc have different layouts.
-        parsedCard = ParsedCard()
+        self.currentCard = ParsedCard()
         if card['layout'] in self.config.api.splitcard_layouts:
             #check if fronside is a creature - this check ideally is moved somewhere else?
             frontSideType = card['card_faces'][0]['type_line']
             if 'Creature' not in frontSideType:
-                return parsedCard
+                return
+            self.currentCard.layout = card['layout']
             for i in range(self.config.api.max_number_faces):
-                self.printCardInfo(card['card_faces'][i])
-                parsedCard.faces.append(
+                self.currentCard.faces.append(
                     ParsedCard(
                         name=card['card_faces'][i]['name'],
                         mana_cost=card['card_faces'][i]['mana_cost'],
@@ -133,21 +135,22 @@ class MomirGame:
                         power=card['card_faces'][i]['power'],
                         toughness=card['card_faces'][i]['toughness'], 
                         art_url=card['card_faces'][i]['image_uris']['art_crop'],
-                        layout=card['card_faces']['layout'],
+                        layout=card['layout'],
                         faces=[]
                     )
                 )
         # add meld card clause
         else:
-            parsedCard.name=card['name']
-            parsedCard.mana_cost=card['mana_cost']
-            parsedCard.type_line=card['type_line']
-            parsedCard.oracle_text=card['oracle_text']
-            parsedCard.power=card['power']
-            parsedCard.toughness=card['toughness'] 
-            parsedCard.art_url=card['image_uris']['art_crop']
-            parsedCard.layout=card['layout']
-        return parsedCard
+            self.currentCard.name=card['name']
+            self.currentCard.mana_cost=card['mana_cost']
+            self.currentCard.type_line=card['type_line']
+            self.currentCard.oracle_text=card['oracle_text']
+            self.currentCard.power=card['power']
+            self.currentCard.toughness=card['toughness'] 
+            self.currentCard.art_url=card['image_uris']['art_crop']
+            self.currentCard.layout=card['layout']
+        if self.state.debug_enabled:    
+            print(self.currentCard) 
 
     def printCardInfo(self, card: dict) -> None:
         output = (
