@@ -32,5 +32,8 @@ image_options:
   img_height: 24
   img_draw_type: 'colorBlocks' #either colorBlocks or ASCII
   img_default_fetch_type: 'uri' # uri or local
-
+printer:
+  win_printer_name: 'POS-58'
+  print_image: True
+  print_text: True
 
