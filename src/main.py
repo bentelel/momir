@@ -75,7 +75,6 @@ class MomirGame:
                 continue
             # build str to exclude sets
             excludedSets = ''
-            print(type(self.config.api.sets_to_exclude))
             if len(self.config.api.sets_to_exclude) > 0:
                 for s in self.config.api.sets_to_exclude:
                     excludedSets += self.config.api.set_exclusion + s + '%20'
@@ -94,7 +93,6 @@ class MomirGame:
                                 f'{self.config.api.manavalue_filter}{inp}%20'
                                 f'{self.config.api.creature_filter}%20{excludedSets}'
                                 )
-                        print(uri)
                         if self.state.debug_enabled:
                             uri += f'%20{self.config.debug.test_query_options}'
                         responseObject = self.makeGetRequest(uri)

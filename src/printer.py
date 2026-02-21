@@ -20,7 +20,7 @@ class POSPrinter:
 
     def _makePrinter(self, cfg: Config):
         backends = {
-            'win32raw': lambda c: Win32Raw(c.win_printer_name),
+            'win32raw': lambda c: Win32Raw(c.win_printer_name, profile="POS-5890"),
             #implement more backends if wanted
         }
         key = cfg.backend.lower()
