@@ -54,7 +54,7 @@ class POSPrinter:
     def printText(self, text: str) -> None:
         pass
 
-    print qrCode(self, text: str) ->:
+    def printQRCode(self, text: str) -> None:
         self.printer.qr(text)
         self.printer.cut()
 
