@@ -2,8 +2,6 @@
 from escpos.printer import Dummy, Win32Raw
 from config import load_config
 from PIL import Image, ImageEnhance, ImageOps, ImageFilter
-import numpy as np
-import cv2
 
 PRINTER_NAME = 'POS-58'
 
@@ -84,53 +82,10 @@ class POSPrinter:
             new_height = int((float(img.height) * float(ratio)))
             img = img.resize((self.maxImgWidth, new_height))
         img = ImageEnhance.Brightness(img).enhance(1.3)
-        img = ImageEnhance.Contrast(img).enhance(1.8)
-        # Convert to proper 1-bit black & white
+        img = ImageEnhance.Contrast(img).enhance(1.5)
         img = img.convert("1")
-        img = img.point(lambda x: 0 if x < 128 else 255, '1')
+        img = img.point(lambda x: 0 if x < 150 else 255, '1')
         return img
-    def optimizeImgDither(self, img):
-        if img.width > self.maxImgWidth:
-            ratio = self.maxImgWidth / float(img.width)
-            new_height = int((float(img.height) * float(ratio)))
-            img = img.resize((self.maxImgWidth, new_height))
-
-    def optimizeImgMore(self, img):
-        pil_img = img.convert('RGB')
-        if pil_img.width > self.maxImgWidth:
-            ratio = self.maxImgWidth / float(pil_img.width)
-            new_height = int((float(img.height) * float(ratio)))
-            pil_img = pil_img.resize((self.maxImgWidth, new_height))
-        img_np = np.array(pil_img)
-        img = cv2.cvtColor(img_np, cv2.COLOR_RGB2GRAY)
-        img = cv2.equalizeHist(img)
-        img = cv2.GaussianBlur(img, (5, 5), 0)
-        img = cv2.adaptiveThreshold(
-            img,
-            255,
-            cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-            cv2.THRESH_BINARY,
-            15,
-            3
-        )
-        final_img = Image.fromarray(img)
-        return final_img
-
-    def optimizeImgMoreOther(self, img):
-        img = img.convert('RGB')
-        if img.width > self.maxImgWidth:
-            ratio = self.maxImgWidth / float(img.width)
-            new_height = int((float(img.height) * float(ratio)))
-            img = img.resize((self.maxImgWidth, new_height), Image.LANCZOS)
-        img_gray = ImageOps.grayscale(img)
-        img_gray = img_gray.filter(ImageFilter.MedianFilter(size=3))
-        img_gray = ImageEnhance.Contrast(img_gray).enhance(2.0)
-        img_gray = img_gray.filter(ImageFilter.FIND_EDGES)
-        img_gray = ImageOps.invert(img_gray)
-        img_gray = ImageEnhance.Brightness(img_gray).enhance(1.2)
-        img_gray = ImageEnhance.Contrast(img_gray).enhance(2.5)
-        img_bw = img_gray.point(lambda x:255 if x > 200 else 0).convert('1')
-        return img_bw 
 
 if __name__=="__main__":
     try:
