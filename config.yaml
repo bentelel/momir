@@ -36,6 +36,7 @@ printer:
   win_printer_name: 'POS-58'
   print_image: True
   print_text: True
+  print_oracle_qr: False
   max_img_width_in_px: 384
   img_print_implementation: 'bitImageRaster'
 

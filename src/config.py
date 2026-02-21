@@ -27,12 +27,12 @@ class ApiOptions:
 
 @dataclass(frozen=True)
 class Printer:
-  win_printer_name: str
-  print_image: bool
-  print_text: bool
-  max_img_width_in_px: int
-  img_print_implementation: str
-
+    win_printer_name: str
+    print_image: bool
+    print_text: bool
+    print_oracle_qr: bool
+    max_img_width_in_px: int
+    img_print_implementation: str
 
 @dataclass(frozen=True)
 class Debug:

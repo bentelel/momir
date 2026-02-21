@@ -54,6 +54,10 @@ class POSPrinter:
     def printText(self, text: str) -> None:
         pass
 
+    print qrCode(self, text: str) ->:
+        self.printer.qr(text)
+        self.printer.cut()
+
     def printImage(self, img) -> None:
         self.printer._raw(b'\x1b\x40')
         optimizedImg = img
