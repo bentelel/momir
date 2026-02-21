@@ -1,5 +1,6 @@
 general:
   max_attempts: 3
+  console_output: True
 offline:
   offline_mode_enabled: False
   card_json: 'oracle-cards-20260217100533.json' 

@@ -37,6 +37,9 @@ class MomirGame:
                 debug_enabled=config.debug.debug_mode_enabled,
                 offline_enabled=config.offline.offline_mode_enabled,
                 image_mode=config.image.default_img_mode,
+                p_img_mode = config.printer.print_image,
+                p_text_mode = config.printer.print_text,
+                p_qr_mode = config.printer.print_oracle_qr
             )
         self.currentCard = ParsedCard()
    
@@ -74,10 +77,16 @@ class MomirGame:
             while True:
                 attemptCounter += 1
                 if attemptCounter > self.config.general.max_attempts:
-                    print(f'Could not fetch fitting card in {self.config.general.max_attempts} attempts. Please try with another cmc.')
+                    print(f"""Could not fetch fitting card in 
+                            {self.config.general.max_attempts} attempts. Please try with another cmc.
+                            """)
                     break
                 if not self.state.offline_enabled:
-                    uri = f'{self.config.api.random_card_uri}?q={self.config.api.manavalue_filter}{inp}%20{self.config.api.creature_filter}%20{excludedSets}'
+                    uri =   f"""  
+                            {self.config.api.random_card_uri}?q=
+                            {self.config.api.manavalue_filter}{inp}%20
+                            {self.config.api.creature_filter}%20{excludedSets}
+                            """
                     if self.state.debug_enabled:
                         uri += f'%20{self.config.debug.test_query_options}'
                     responseObject = self.makeGetRequest(uri)
@@ -91,10 +100,11 @@ class MomirGame:
                         self.parseCard(response) 
                         self.printCard()
                     except:
-                        print('Could not fetch card.')
-                        print('Status code: '+str(response['status']))
-                        print('Details: '+response['details'])
-
+                        err = f"""
+                            Could not fetch card.\n
+                            Status code: {str(response['status'])}\n
+                            Details: {response['details']}\n
+                            """
                 break
 
     def makeGetRequest(self, URI: str) -> requests.models.Response:
@@ -103,14 +113,15 @@ class MomirGame:
         return r
 
     def parseCard(self, card: dict) -> None:
-        # Function should parse card information and output a common format containing all relevant information (name, type_line, oracle_text, toughness etc)
+        # Function should parse card information and output a common format containing 
+        # all relevant information (name, type_line, oracle_text, toughness etc)
         # this is needed because normal cards, meld cards, flip cards etc have different layouts.
         self.currentCard = ParsedCard()
         if card['layout'] in self.config.api.splitcard_layouts:
             #check if fronside is a creature - this check ideally is moved somewhere else?
             self.currentCard.layout = card['layout']
             self.currentCard.card_is_dualfaced = True
-            self.currentCard.gatherer_url = crard['related_uris']['gatherer']
+            self.currentCard.gatherer_url = card['related_uris']['gatherer']
             for i in range(self.config.api.max_number_faces):
                 self.currentCard.faces.append(
                     ParsedCard(
