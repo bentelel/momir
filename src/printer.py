@@ -15,6 +15,7 @@ class POSPrinter:
     def _open(self):
         p=self._makePrinter(self.config)
         p._raw(b"\x1b\x40")
+        p.charcode("CP1252")
         return p
 
     def _makePrinter(self, cfg: Config):
@@ -28,16 +29,27 @@ class POSPrinter:
         except KeyError:
             raise ValueError(f"Unknown printer backend: {cfg.backend!r}")
 
+    def _sanitizeText(self, text: str) -> str:
+        replacements = {
+            "–": "-",
+            "—": "-",
+            "’": "'",
+            "“": '"',
+            "”": '"'
+        }
+        for k, v in replacements.items():
+            text = text.replace(k, v)
+        return text
 
     def printText(self, text: str) -> None:
         self.p._raw(b'\x1b\x40')
         self.p.set(align='left', bold=False, width=2, height=2)
-        self.p.text(text)
+        self.p.text(self._sanitizeText(text))
         self.feedLines(1)
         self.p.close()
 
     def printQRCode(self, text: str) -> None:
-        self.p.qr(text)
+        self.p.qr(self._sanitizeText(text))
         self.feedLines(1)
         self.p.close()
 
