@@ -4,7 +4,7 @@ from image import DrawImage
 from PIL import Image
 from pathlib import Path
 import offline
-import printer
+from printer import POSPrinter
 from dataclasses import dataclass, field
 from typing import List
 from config import load_config, Config
@@ -44,7 +44,9 @@ class MomirGame:
                 p_text_mode = config.printer.print_text,
                 p_qr_mode = config.printer.print_oracle_qr
             )
-        self.currentCard = ParsedCard()
+        self.currentCard = ParsedCard()        
+        if self.state.p_img_mode:
+            self.printer = POSPrinter()
    
 
     def run(self) -> None:
@@ -73,6 +75,7 @@ class MomirGame:
                 continue
             # build str to exclude sets
             excludedSets = ''
+            print(type(self.config.api.sets_to_exclude))
             if len(self.config.api.sets_to_exclude) > 0:
                 for s in self.config.api.sets_to_exclude:
                     excludedSets += self.config.api.set_exclusion + s + '%20'
@@ -86,11 +89,12 @@ class MomirGame:
                         ))
                         break
                     if not self.state.offline_enabled:
-                        uri =   f"""  
-                                {self.config.api.random_card_uri}?q=
-                                {self.config.api.manavalue_filter}{inp}%20
-                                {self.config.api.creature_filter}%20{excludedSets}
-                                """
+                        uri =   (
+                                f'{self.config.api.random_card_uri}?q='
+                                f'{self.config.api.manavalue_filter}{inp}%20'
+                                f'{self.config.api.creature_filter}%20{excludedSets}'
+                                )
+                        print(uri)
                         if self.state.debug_enabled:
                             uri += f'%20{self.config.debug.test_query_options}'
                         responseObject = self.makeGetRequest(uri)
@@ -111,7 +115,11 @@ class MomirGame:
             if response['object'] == 'error':
                 continue
             self.parseCard(response) 
+            if self.state.p_img_mode or self.state.p_text_mode or self.state.p_qr_mode:
+                self.printer.feedLines(1)             
             self.printCard() ## to do -- connect printer here and get different printing cases going
+            if self.state.p_img_mode or self.state.p_text_mode or self.state.p_qr_mode:
+                self.printer.finishPrinting()
 
     def makeGetRequest(self, URI: str) -> requests.models.Response:
         r = requests.get(URI, timeout=self.config.api.request_timeout_in_s)    
@@ -184,7 +192,8 @@ class MomirGame:
             output += f"{card.power}/{card.toughness}"
         print(output)    
         print('')
-        #printer.printSomeShit(output)
+        if self.state.p_text_mode:
+            self.printer.printText(output)
 
     def getArt(self, URI: str) -> str:
         r = self.makeGetRequest(URI)
@@ -203,9 +212,11 @@ class MomirGame:
         if drawMode == 'colorBlocks': 
             img.draw_image()
         elif drawMode == 'ASCII':
-            print('err: not yet implemented')
-        #with open('img/imgColor.png', 'rb') as f:
-        #    printer.printImage(f)
+            raise('err: not yet implemented')
+        if self.state.p_img_mode:
+            img = Image.open('img/imgColor.png')
+            #hardcoded for now, all of this needs cleaning up, this is a mess.
+            self.printer.printImage(img)
 
 def main() -> None:
     m = MomirGame(load_config())
