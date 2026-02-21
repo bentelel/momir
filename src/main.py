@@ -14,6 +14,9 @@ class AppState:
     debug_enabled: bool
     offline_enabled: bool
     image_mode: bool
+    p_img_mode: bool
+    p_text_mode: bool
+    p_qr_mode: bool
 
 @dataclass
 class ParsedCard:
@@ -75,37 +78,40 @@ class MomirGame:
                     excludedSets += self.config.api.set_exclusion + s + '%20'
             attemptCounter = 0
             while True:
-                attemptCounter += 1
-                if attemptCounter > self.config.general.max_attempts:
-                    print(f"""Could not fetch fitting card in 
-                            {self.config.general.max_attempts} attempts. Please try with another cmc.
-                            """)
+                try:
+                    attemptCounter += 1
+                    if attemptCounter > self.config.general.max_attempts:
+                        print(( f"Could not fetch fitting card in " 
+                                f"{self.config.general.max_attempts} attempts. Please try with another cmc."
+                        ))
+                        break
+                    if not self.state.offline_enabled:
+                        uri =   f"""  
+                                {self.config.api.random_card_uri}?q=
+                                {self.config.api.manavalue_filter}{inp}%20
+                                {self.config.api.creature_filter}%20{excludedSets}
+                                """
+                        if self.state.debug_enabled:
+                            uri += f'%20{self.config.debug.test_query_options}'
+                        responseObject = self.makeGetRequest(uri)
+                        if self.state.debug_enabled:
+                                print(responseObject.elapsed.total_seconds())
+                        response = responseObject.json()
+                        if self.state.debug_enabled:
+                            print(response)
+                    if response['object'] == 'card':
+                        break
+                except:
+                    err = f"""
+                        Could not fetch card.\n
+                        Status code: {str(response['status'])}\n
+                        Details: {response['details']}\n
+                        """
                     break
-                if not self.state.offline_enabled:
-                    uri =   f"""  
-                            {self.config.api.random_card_uri}?q=
-                            {self.config.api.manavalue_filter}{inp}%20
-                            {self.config.api.creature_filter}%20{excludedSets}
-                            """
-                    if self.state.debug_enabled:
-                        uri += f'%20{self.config.debug.test_query_options}'
-                    responseObject = self.makeGetRequest(uri)
-                    if self.state.debug_enabled:
-                            print(responseObject.elapsed.total_seconds())
-                    response = responseObject.json()
-
-                    if self.state.debug_enabled:
-                        print(response)
-                    try:
-                        self.parseCard(response) 
-                        self.printCard()
-                    except:
-                        err = f"""
-                            Could not fetch card.\n
-                            Status code: {str(response['status'])}\n
-                            Details: {response['details']}\n
-                            """
-                break
+            if response['object'] == 'error':
+                continue
+            self.parseCard(response) 
+            self.printCard() ## to do -- connect printer here and get different printing cases going
 
     def makeGetRequest(self, URI: str) -> requests.models.Response:
         r = requests.get(URI, timeout=self.config.api.request_timeout_in_s)    

@@ -28,10 +28,10 @@ debug:
   debug_mode_enabled: False
   test_query_options: 'layout=modal_dfc' #'name=Hostile%20Hostel'
 image_options:
-  default_img_mode: True
+  default_img_mode: False
   img_width: 48
   img_height: 24
-  img_draw_type: 'colorBlocks' #either colorBlocks or ASCII
+  img_draw_type: 'colorBlocks' #either colorBlocks or ASCII - ascii not working currently
   img_default_fetch_type: 'uri' # uri or local
 printer:
   backend: 'win32raw'

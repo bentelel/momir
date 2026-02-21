@@ -6,7 +6,7 @@ import yaml
 @dataclass(frozen=True)
 class General:
     max_attempts: int
-    console_enabled: bool
+    console_output: bool
 
 
 @dataclass(frozen=True)
