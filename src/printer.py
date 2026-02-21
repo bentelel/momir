@@ -33,12 +33,12 @@ class POSPrinter:
         self.p._raw(b'\x1b\x40')
         self.p.set(align='left', bold=False, width=2, height=2)
         self.p.text(text)
-        self._feedLines(1)
+        self.feedLines(1)
         self.p.close()
 
     def printQRCode(self, text: str) -> None:
         self.p.qr(text)
-        self._feedLines(1)
+        self.feedLines(1)
         self.p.close()
 
     def printImage(self, img) -> None:
@@ -46,11 +46,12 @@ class POSPrinter:
         optimizedImg = self._optimizeImg(img)
         self.p.set(align='left')
         self.p.image(optimizedImg, impl=self.imgPrintImpl)
-        self._feedLines(1)
+        self.feedLines(1)
         self.p.close()
     
-    def finishePrinting(self) -> None:
-        self._feedLines(3)
+    def finishPrinting(self) -> None:
+        self.feedLines(3)
+        self.p.close()
 
     def printTestImage(self) -> None:
         self.p._raw(b'\x1b\x40')
@@ -72,7 +73,7 @@ class POSPrinter:
 
     # this should probably be implemented in a cleaner way so that my class extends the escpos class
     # so that dotnotation/ method access is cleaner and not scattered like it now is
-    def _feedLines(self, n: int):
+    def feedLines(self, n: int):
         # ESC d n  -> print and feed n lines
         self.p._raw(bytes([0x1B, 0x64, n]))
 
