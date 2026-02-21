@@ -6,6 +6,7 @@ import yaml
 @dataclass(frozen=True)
 class General:
     max_attempts: int
+    console_output: bool
 
 
 @dataclass(frozen=True)
@@ -25,6 +26,17 @@ class ApiOptions:
     splitcard_layouts: list[str]
     layout_edgecases: list[str]
 
+@dataclass(frozen=True)
+class Printer:
+    backend: str
+    win_printer_name: str
+    VID: int
+    PID: int
+    print_image: bool
+    print_text: bool
+    print_oracle_qr: bool
+    max_img_width_in_px: int
+    img_print_implementation: str
 
 @dataclass(frozen=True)
 class Debug:
@@ -48,7 +60,7 @@ class Config:
     api: ApiOptions
     debug: Debug
     image: ImageOptions
-
+    printer: Printer
 
 def load_config(path: str = "config.yaml") -> Config:
     with open(path, "r") as f:
@@ -60,4 +72,5 @@ def load_config(path: str = "config.yaml") -> Config:
         api=ApiOptions(**raw["api_options"]),
         debug=Debug(**raw["debug"]),
         image=ImageOptions(**raw["image_options"]),
+        printer=Printer(**raw["printer"])
     )
