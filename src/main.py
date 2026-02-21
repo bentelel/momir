@@ -24,6 +24,7 @@ class ParsedCard:
     power: str | None = None
     toughness: str | None = None
     art_url: str | None = None
+    gatherer_url: str | None = None
     layout: str | None = None
     card_is_dualfaced: bool | None = False
     # if layout is a double or trippledfaced card we store the faces in a nested structure
@@ -109,6 +110,7 @@ class MomirGame:
             #check if fronside is a creature - this check ideally is moved somewhere else?
             self.currentCard.layout = card['layout']
             self.currentCard.card_is_dualfaced = True
+            self.currentCard.gatherer_url = crard['related_uris']['gatherer']
             for i in range(self.config.api.max_number_faces):
                 self.currentCard.faces.append(
                     ParsedCard(
@@ -134,6 +136,7 @@ class MomirGame:
             self.currentCard.power=card['power']
             self.currentCard.toughness=card['toughness'] 
             self.currentCard.art_url=card['image_uris']['art_crop']
+            self.gatherer_url=card['related_uris']['gatherer']
             self.currentCard.layout=card['layout']
         if self.state.debug_enabled:
             print('')
