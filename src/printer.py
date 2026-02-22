@@ -21,6 +21,7 @@ class POSPrinter:
     def _makePrinter(self, cfg: Config):
         backends = {
             'win32raw': lambda c: Win32Raw(c.win_printer_name, profile="POS-5890"),
+            'usb': lambda c: Usb(c.vid, c.pid, profile="POS-5890"),
             #implement more backends if wanted
         }
         key = cfg.backend.lower()
@@ -95,7 +96,7 @@ if __name__=="__main__":
         text = 'This is some creature.\nManacost here\nTypeline here\noracletexthere\n1/1'
         p.printText(text)
         p.printTestImage()
-        p.finishePrinting()
+        p.finishPrinting()
     except Exception as e:
         print("Error:", e)
 

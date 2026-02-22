@@ -30,8 +30,8 @@ class ApiOptions:
 class Printer:
     backend: str
     win_printer_name: str
-    VID: int
-    PID: int
+    vid: int
+    pid: int
     print_image: bool
     print_text: bool
     print_oracle_qr: bool
