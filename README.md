@@ -26,3 +26,21 @@ on linux > get printer path via
     if denied, set permissions:
     sudo usermod -aG lp $USER
     newgrp lp
+
+    if main.py or printer.py run into permission denied errors run:
+        sudo tee /etc/udev/rules.d/99-pos58.rules >/dev/null <<'EOF'
+        SUBSYSTEM=="usb", ATTR{idVendor}=="0416", ATTR{idProduct}=="5011", MODE="0666"
+        EOF
+
+        sudo udevadm control --reload-rules
+        sudo udevadm trigger
+
+        unplug+replug printer
+
+    if request to API is really fucking slow, 
+    might be that IPv6 route is broken/bad. In this case, try telling linux to prefere IPv4:
+        sudo nano /etc/gai.conf
+        uncomment this like:
+            precedence ::ffff:0:0/96  100
+
+

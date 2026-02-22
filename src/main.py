@@ -1,4 +1,4 @@
-import requests
+import requests, socket
 import json
 from image import DrawImage
 from PIL import Image
@@ -97,7 +97,8 @@ class MomirGame:
                             uri += f'%20{self.config.debug.test_query_options}'
                         responseObject = self.makeGetRequest(uri)
                         if self.state.debug_enabled:
-                                print(responseObject.elapsed.total_seconds())
+                            print(responseObject)
+                            print(responseObject.elapsed.total_seconds())
                         response = responseObject.json()
                         if self.state.debug_enabled:
                             print(response)
@@ -120,8 +121,19 @@ class MomirGame:
                 self.printer.finishPrinting()
 
     def makeGetRequest(self, URI: str) -> requests.models.Response:
-        r = requests.get(URI, timeout=self.config.api.request_timeout_in_s)    
-        #j = r.json()
+        s = requests.Session()
+        s.trust_env = False
+        s.headers.update({
+            "User-Agent": "momir/0.1 (contact:bentelel@github.com)",
+            "Accept": "application/json;q=0.9,*/*;q=0.8"
+        })
+        r = s.get(URI, stream=True, allow_redirects=False, 
+                            timeout=self.config.api.request_timeout_in_s)    
+        if self.state.debug_enabled:
+            sock = r.raw._connection.sock
+            peer = sock.getpeername()
+            print("peer: ", peer)
+            print("ipv6? ", ":" in peer[0])
         return r
 
     def parseCard(self, card: dict) -> None:
