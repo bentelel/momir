@@ -47,6 +47,7 @@ class MomirGame:
         self.currentCard = ParsedCard()        
         if self.state.p_img_mode:
             self.printer = POSPrinter()
+        self.session = requests.Session()
    
 
     def run(self) -> None:
@@ -74,10 +75,6 @@ class MomirGame:
                 print("Entered value was not an integer.")
                 continue
             # build str to exclude sets
-            excludedSets = ''
-            if len(self.config.api.sets_to_exclude) > 0:
-                for s in self.config.api.sets_to_exclude:
-                    excludedSets += self.config.api.set_exclusion + s + '%20'
             attemptCounter = 0
             while True:
                 try:
@@ -88,18 +85,13 @@ class MomirGame:
                         ))
                         break
                     if not self.state.offline_enabled:
-                        uri =   (
-                                f'{self.config.api.random_card_uri}?q='
-                                f'{self.config.api.manavalue_filter}{inp}%20'
-                                f'{self.config.api.creature_filter}%20{excludedSets}'
-                                )
+                        params = {
+                            "q": f"{self.config.api.manavalue_filter}{inp} "
+                                 f"{self.config.api.creature_filter} "
+                                + " ".join(f"{self.config.api.set_exclusion}{s}" for s in self.config.api.sets_to_exclude)}
                         if self.state.debug_enabled:
-                            uri += f'%20{self.config.debug.test_query_options}'
-                        responseObject = self.makeGetRequest(uri)
-                        if self.state.debug_enabled:
-                            print(responseObject)
-                            print(responseObject.elapsed.total_seconds())
-                        response = responseObject.json()
+                                params['q'] += f"{self.config.debug.test_query_options}"
+                        response= self.fetchJson(self.config.api.random_card_uri, params)
                         if self.state.debug_enabled:
                             print(response)
                     if response['object'] == 'card':
@@ -120,22 +112,22 @@ class MomirGame:
             if self.state.p_img_mode or self.state.p_text_mode or self.state.p_qr_mode:
                 self.printer.finishPrinting()
 
-    def makeGetRequest(self, URI: str) -> requests.models.Response:
-        s = requests.Session()
-        s.trust_env = False
-        s.headers.update({
+    def fetchJson(self, URI: str, params: dict | None = None) -> dict:
+        self.session.trust_env = False
+        self.session.headers.update({
             "User-Agent": "momir/0.1 (contact:bentelel@github.com)",
             "Accept": "application/json;q=0.9,*/*;q=0.8"
         })
-        r = s.get(URI, stream=True, allow_redirects=False, 
-                            timeout=self.config.api.request_timeout_in_s)    
-        if self.state.debug_enabled:
-            sock = r.raw._connection.sock
-            peer = sock.getpeername()
-            print("peer: ", peer)
-            print("ipv6? ", ":" in peer[0])
-        return r
-
+        r = self.session.get(URI, params=params, timeout=(5, self.config.api.request_timeout_in_s))
+        try:
+            r.raise_for_status()
+            if self.state.debug_enabled:
+                print(r)
+                print(r.elapsed.total_seconds())
+            return r.json()
+        finally:
+            r.close()
+            
     def parseCard(self, card: dict) -> None:
         # Function should parse card information and output a common format containing 
         # all relevant information (name, type_line, oracle_text, toughness etc)
@@ -205,24 +197,31 @@ class MomirGame:
         if self.state.p_text_mode:
             self.printer.printText(output)
 
-    def getArt(self, URI: str) -> str:
-        r = self.makeGetRequest(URI)
-        with open('img/imgColor.png', 'wb') as f:
-            f.write(r.content)
-        img = Image.open('img/imgColor.png')
-        img = img.convert('1') # convert to BW
-        img.save('img/imgBW.png')
-        return r.content
+    def download(self, URI: str, path: str) -> None:
+        r = self.session.get(URI, stream=True, allow_redirects=True, timeout=(5, self.config.api.request_timeout_in_s))
+        try:
+            r.raise_for_status()
+            with open(path, 'wb') as f:
+                for chunk in r.iter_content(256 * 1024):
+                    if chunk:
+                        f.write(chunk)
+        finally:
+            r.close()
+
+    def getArt(self, URI: str) -> None:
+        self.download(URI, "img/imgColor.png")
+        img = Image.open("img/imgColor.png").convert("1")
+        img.save("img/imgBW.png")
 
     def printArt(self, fetchMode:str, drawMode: str, path: str) -> None:
-        if fetchMode=='uri':
-            img = DrawImage.from_url(path, (self.config.image.img_width,self.config.image.img_height))
-        elif fetchMode=='local':
-            img = DrawImage.from_file(path, (self.config.image.img_width,self.config.image.img_height))
-        if drawMode == 'colorBlocks': 
-            img.draw_image()
-        elif drawMode == 'ASCII':
-            raise('err: not yet implemented')
+        #if fetchMode=='uri':
+            #    img = DrawImage.from_url(path, (self.config.image.img_width,self.config.image.img_height))
+        #elif fetchMode=='local':
+        #    img = DrawImage.from_file(path, (self.config.image.img_width,self.config.image.img_height))
+        #if drawMode == 'colorBlocks': 
+            #    img.draw_image()
+        #elif drawMode == 'ASCII':
+        #    raise('err: not yet implemented')
         if self.state.p_img_mode:
             img = Image.open('img/imgColor.png')
             #hardcoded for now, all of this needs cleaning up, this is a mess.
