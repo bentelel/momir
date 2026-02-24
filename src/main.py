@@ -54,7 +54,8 @@ class MomirGame:
         while True:
             inp = input('please enter a manavalue: ').lower()
             if inp == 'o':
-                self.handleOptions()
+                if self.handleOptions():
+                    break
             try:
                 _ = int(inp)
             except:
@@ -98,10 +99,10 @@ class MomirGame:
             if self.state.p_img_mode or self.state.p_text_mode or self.state.p_qr_mode:
                 self.printer.finishPrinting()
     
-    def handleOptions(self):
+    def handleOptions(self) -> bool:
         inp = input('   q-quit\n   d-toggle debugmode\n   o-toggle offlinemode\n   i-toggle imagemode\n').lower()
         if inp == 'q':
-            break
+            return True
         elif inp == 'd':
             self.state.debug_enabled = not self.state.debug_enabled
             print('Debugmode turned '+('on.' if self.state.debug_enabled else 'off.'))
@@ -111,7 +112,7 @@ class MomirGame:
         elif inp == 'i':
             self.state.image_mode = not self.state.image_mode
             print('Imagemode turned '+('on.' if self.state.image_mode else 'off.'))
-
+        return False
 
 
     def fetchJson(self, URI: str, params: dict | None = None) -> dict:
@@ -139,7 +140,7 @@ class MomirGame:
             #check if fronside is a creature - this check ideally is moved somewhere else?
             self.currentCard.layout = card['layout']
             self.currentCard.card_is_dualfaced = True
-            self.currentCard.gatherer_url = card['related_uris']['gatherer']
+            #self.currentCard.gatherer_url = card['related_uris']['gatherer']
             for i in range(self.config.api.max_number_faces):
                 self.currentCard.faces.append(
                     ParsedCard(
@@ -194,7 +195,7 @@ class MomirGame:
         )
         if 'Creature' in card.type_line:
             output += f"{card.power}/{card.toughness}"
-        if self.config.generic.console_output:
+        if self.config.general.console_output:
             print(output)    
             print('')
         if self.state.p_text_mode:
