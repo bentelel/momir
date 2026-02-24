@@ -32,6 +32,7 @@ class Printer:
     win_printer_name: str
     vid: int
     pid: int
+    codepage: str
     print_image: bool
     print_text: bool
     print_oracle_qr: bool
