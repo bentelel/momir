@@ -43,4 +43,11 @@ on linux > get printer path via
         uncomment this like:
             precedence ::ffff:0:0/96  100
 
+To set up as easily runable on linux:
+    create momir.sh in .local/bin/
+        #!/bin/bash
+        PROJECT_DIR="$HOME/path/to/your/project/momir"
+        "$PROJECT_DIR/env/bin/python" "$PROJECT_DIR/momir/main.py"
 
+    and:
+        chmod +x momir.sh
