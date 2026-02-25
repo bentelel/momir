@@ -47,6 +47,9 @@ class MomirGame:
         if self.state.p_img_mode or self.state.p_text_mode or self.state.p_qr_mode:
             self.printer = POSPrinter()
         self.session = requests.Session()
+        self.base_dir = Path(__file__).resolve().parents[1]
+        self.img_path_color = self.base_dir / "img/imgColor.png"
+        self.img_path_bw = self.base_dir / "img/imgBW.png"
    
 
     def run(self) -> None:
@@ -210,13 +213,13 @@ class MomirGame:
             self.printCardText(self.currentCard) 
             if self.state.p_img_mode:
                 self.getCardArt(self.currentCard.art_url)
-                self.printCardArtwork('img/imgColor.png')
+                self.printCardArtwork(self.img_path_color)
             return
         for i in range(self.config.api.max_number_faces):
             self.printCardText(self.currentCard.faces[i])       
             if self.state.p_img_mode:
                 self.getCardArt(self.currentCard.faces[i].art_url)
-                self.printCardArtwork('img/imgColor.png')
+                self.printCardArtwork(self.img_path_color)
 
     def printCardText(self, card: ParsedCard) -> None:
         """
@@ -257,9 +260,9 @@ class MomirGame:
         Fetches Card Artwork from scryfall API and saves it to img/imgColor.png.
         Converts the artwork to black&white using dithering and saves it to img/imgBW.png.
         """
-        self.download(URI, "img/imgColor.png")
-        img = Image.open("img/imgColor.png").convert("1")
-        img.save("img/imgBW.png")
+        self.download(URI, self.img_path_color)
+        img = Image.open(self.img_path_color).convert("1")
+        img.save(self.img_path_bw)
 
     def printCardArtwork(self, path: str) -> None:
         """

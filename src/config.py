@@ -1,6 +1,7 @@
 
 from dataclasses import dataclass
 import yaml
+from pathlib import Path
 #this came to me due to our lord and saviour chatgpt. i will think about if this is bullshit later on and hate myself for it.
 
 @dataclass(frozen=True)
@@ -62,7 +63,8 @@ class Config:
     printer: Printer
 
 def load_config(path: str = "config.yaml") -> Config:
-    with open(path, "r") as f:
+    base_dir = Path(__file__).resolve().parents[1]
+    with open(base_dir / path, "r") as f:
         raw = yaml.safe_load(f)
 
     return Config(
