@@ -48,8 +48,6 @@ class Debug:
 @dataclass(frozen=True)
 class ImageOptions:
     default_img_mode: bool
-    img_default_fetch_type: str
-    img_draw_type: str
     img_width: int
     img_height: int
 
