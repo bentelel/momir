@@ -1,6 +1,5 @@
 import requests, socket
 import json
-from image import DrawImage
 from PIL import Image
 from pathlib import Path
 import offline
@@ -45,7 +44,7 @@ class MomirGame:
                 p_qr_mode = config.printer.print_oracle_qr
             )
         self.currentCard = ParsedCard()        
-        if self.state.p_img_mode:
+        if self.state.p_img_mode or self.state.p_text_mode or self.state.p_qr_mode:
             self.printer = POSPrinter()
         self.session = requests.Session()
    
@@ -56,21 +55,16 @@ class MomirGame:
             if inp == 'o':
                 if self.handleOptions():
                     break
+                continue
             try:
                 _ = int(inp)
+                if int(inp) < 0:
+                    raise Exception('No valid mv provided.')
             except:
-                print("Entered value was not an integer.")
+                print("Entered value was not a positive integer.")
                 continue
-            # build str to exclude sets
-            attemptCounter = 0
-            while True:
+            for attemptCounter in range(self.config.general.max_attempts):
                 try:
-                    attemptCounter += 1
-                    if attemptCounter > self.config.general.max_attempts:
-                        print(( f"Could not fetch fitting card in " 
-                                f"{self.config.general.max_attempts} attempts. Please try with another cmc."
-                        ))
-                        break
                     if not self.state.offline_enabled:
                         params = {
                             "q": f"{self.config.api.manavalue_filter}{inp} "
@@ -83,26 +77,44 @@ class MomirGame:
                             print(response)
                     if response['object'] == 'card':
                         break
+                    if attemptCounter == self.config.general.max_attempts-1:
+                        print(( f"Could not fetch fitting card in " 
+                                f"{self.config.general.max_attempts} attempts. Please try with another cmc."
+                        ))
                 except:
                     err = f"""
                         Could not fetch card.\n
                         Status code: {str(response['status'])}\n
                         Details: {response['details']}\n
                         """
-                    break
+                    continue
+                
+                
             if response['object'] == 'error':
                 continue
             self.parseCard(response) 
             if self.state.p_img_mode or self.state.p_text_mode or self.state.p_qr_mode:
                 self.printer.feedLines(1)             
-            self.printCard() ## to do -- connect printer here and get different printing cases going
+            self.printCard()
             if self.state.p_img_mode or self.state.p_text_mode or self.state.p_qr_mode:
                 self.printer.finishPrinting()
     
     def handleOptions(self) -> bool:
+        """
+        Displays options and waits for user input.
+        Sets the state attributes of the instance.
+        Valid input: 
+            q - quit
+            d - toggle debug
+            o - toggle offline
+            i - toggle image mode
+            c - toggle console output
+        Returns: flag if run should be terminate.
+        """
+        terminateRun = True
         inp = input('   q-quit\n   d-toggle debugmode\n   o-toggle offlinemode\n   i-toggle imagemode\n').lower()
         if inp == 'q':
-            return True
+            return terminateRun
         elif inp == 'd':
             self.state.debug_enabled = not self.state.debug_enabled
             print('Debugmode turned '+('on.' if self.state.debug_enabled else 'off.'))
@@ -112,10 +124,19 @@ class MomirGame:
         elif inp == 'i':
             self.state.image_mode = not self.state.image_mode
             print('Imagemode turned '+('on.' if self.state.image_mode else 'off.'))
-        return False
+        elif inp == 'c':
+            self.state.console_output = not self.state.console_output
+            print('Imagemode turned '+('on.' if self.state.console_output else 'off.'))
+
+        terminateRun = False
+        return terminateRun
 
 
     def fetchJson(self, URI: str, params: dict | None = None) -> dict:
+        """
+        Fetches random card (json format) from Scryfall API filtered by adjustable parameters.
+        Returns card in a dict.
+        """
         self.session.trust_env = False
         self.session.headers.update({
             "User-Agent": "momir/0.1 (contact:bentelel@github.com)",
@@ -128,10 +149,18 @@ class MomirGame:
                 print(r)
                 print(r.elapsed.total_seconds())
             return r.json()
+        except requests.exceptions.HTTPError as e:
+            if self.state.debug_enabled:
+                print(e)
+            return r.json()
         finally:
             r.close()
             
     def parseCard(self, card: dict) -> None:
+        """
+        Parse a dictionary representing a mtg card from the Scryfall API.
+        SEts the currentCard attr of the instance.
+        """
         # Function should parse card information and output a common format containing 
         # all relevant information (name, type_line, oracle_text, toughness etc)
         # this is needed because normal cards, meld cards, flip cards etc have different layouts.
@@ -166,7 +195,7 @@ class MomirGame:
             self.currentCard.power=card['power']
             self.currentCard.toughness=card['toughness'] 
             self.currentCard.art_url=card['image_uris']['art_crop']
-            self.gatherer_url=card['related_uris']['gatherer']
+            #self.gatherer_url=card['related_uris']['gatherer']
             self.currentCard.layout=card['layout']
         if self.state.debug_enabled:
             print('')
@@ -174,19 +203,26 @@ class MomirGame:
             print('')
 
     def printCard(self) -> None:
+        """
+        Prints card text and art according to instances state printing settings and card type.
+        """
         if not self.currentCard.card_is_dualfaced:
-            self.printCardFace(self.currentCard) 
-            if self.state.image_mode:
-                self.getArt(self.currentCard.art_url)
-                self.printArt(self.currentCard.art_url)
+            self.printCardText(self.currentCard) 
+            if self.state.p_img_mode:
+                self.getCardArt(self.currentCard.art_url)
+                self.printCardArtwork('img/imgColor.png')
             return
         for i in range(self.config.api.max_number_faces):
-            self.printCardFace(self.currentCard.faces[i])       
-            if self.state.image_mode:
-                self.getArt(self.currentCard.faces[i].art_url)
-                self.printArt( self.currentCard.faces[i].art_url)
+            self.printCardText(self.currentCard.faces[i])       
+            if self.state.p_img_mode:
+                self.getCardArt(self.currentCard.faces[i].art_url)
+                self.printCardArtwork('img/imgColor.png')
 
-    def printCardFace(self, card: ParsedCard) -> str:
+    def printCardText(self, card: ParsedCard) -> None:
+        """
+        Builds output string from currentCard attr and routes that output into the text printing functions
+        appropriate for the current app state (print to printer, print to console).
+        """
         output = (
             f"{card.name}\n"
             f"{card.mana_cost}\n"
@@ -202,6 +238,9 @@ class MomirGame:
             self.printer.printText(output)
 
     def download(self, URI: str, path: str) -> None:
+        """
+        Downloads whatever is behind the URI called and saves it to the specified path (please include the file extension in path).
+        """
         r = self.session.get(URI, stream=True, allow_redirects=True, 
                              timeout=(5, self.config.api.request_timeout_in_s))
         try:
@@ -213,28 +252,21 @@ class MomirGame:
         finally:
             r.close()
 
-    def getArt(self, URI: str) -> None:
+    def getCardArt(self, URI: str) -> None:
+        """
+        Fetches Card Artwork from scryfall API and saves it to img/imgColor.png.
+        Converts the artwork to black&white using dithering and saves it to img/imgBW.png.
+        """
         self.download(URI, "img/imgColor.png")
         img = Image.open("img/imgColor.png").convert("1")
         img.save("img/imgBW.png")
 
-    def printArt(self, path: str) -> None:
-    ### takes in path
-        if self.config.general.console_output:
-            if self.config.image.img_default_fetch_type=='uri':
-                # this needs cleaning as it currently fetches the card 
-                # again from the API while we already did that. i dont think we need this here.
-                img = DrawImage.from_url(path, (self.config.image.img_width,self.config.image.img_height))
-            elif self.config.image.img_default_fetch_type=='local':
-                img = DrawImage.from_file(path, (self.config.image.img_width,self.config.image.img_height))
-            if self.config.image.img_draw_type == 'colorBlocks': 
-                img.draw_image()
-            elif self.config.image.img_draw_type == 'ASCII':
-                raise('err: not yet implemented')
-        if self.state.p_img_mode:
-            img = Image.open('img/imgColor.png')
-            #hardcoded for now, all of this needs cleaning up, this is a mess.
-            self.printer.printImage(img)
+    def printCardArtwork(self, path: str) -> None:
+        """
+        Prints currentCards artwork (through saved file in img/imgColor) on POSPrinter 
+        """
+        img = Image.open(path)
+        self.printer.printImage(img)
 
 def main() -> None:
     m = MomirGame(load_config())
