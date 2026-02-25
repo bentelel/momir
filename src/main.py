@@ -63,16 +63,8 @@ class MomirGame:
             except:
                 print("Entered value was not a positive integer.")
                 continue
-            # build str to exclude sets
-            attemptCounter = 0
-            while True:
+            for attemptCounter in range(self.config.general.max_attempts):
                 try:
-                    attemptCounter += 1
-                    if attemptCounter > self.config.general.max_attempts:
-                        print(( f"Could not fetch fitting card in " 
-                                f"{self.config.general.max_attempts} attempts. Please try with another cmc."
-                        ))
-                        break
                     if not self.state.offline_enabled:
                         params = {
                             "q": f"{self.config.api.manavalue_filter}{inp} "
@@ -85,7 +77,10 @@ class MomirGame:
                             print(response)
                     if response['object'] == 'card':
                         break
-
+                    if attemptCounter == self.config.general.max_attempts-1:
+                        print(( f"Could not fetch fitting card in " 
+                                f"{self.config.general.max_attempts} attempts. Please try with another cmc."
+                        ))
                 except:
                     err = f"""
                         Could not fetch card.\n
@@ -93,6 +88,8 @@ class MomirGame:
                         Details: {response['details']}\n
                         """
                     continue
+                
+                
             if response['object'] == 'error':
                 continue
             self.parseCard(response) 
