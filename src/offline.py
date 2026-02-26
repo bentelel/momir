@@ -1,9 +1,9 @@
 import json
 import random
 import yaml
+import config
 
-with open('config.yaml', 'r') as f:
-        CONFIG = yaml.safe_load(f)
+CONFIG = load_config()
 
 class OfflineClient:
     randomCard = {}
