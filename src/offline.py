@@ -1,7 +1,9 @@
 import json
 import random
 import yaml
-import config
+from config import load_config
+
+
 
 CONFIG = load_config()
 
